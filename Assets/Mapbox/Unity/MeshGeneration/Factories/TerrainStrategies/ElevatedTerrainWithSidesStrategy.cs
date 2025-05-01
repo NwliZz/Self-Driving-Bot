@@ -227,7 +227,7 @@ namespace Mapbox.Unity.MeshGeneration.Factories.TerrainStrategies
 			}
 
 
-			var mesh = tile.MeshFilter.sharedMesh;
+			var mesh = tile.MeshFilter.mesh;
 			mesh.SetVertices(_newVertexList);
 			mesh.SetNormals(_newNormalList);
 			mesh.SetUVs(0, _newUvList);
@@ -317,7 +317,7 @@ namespace Mapbox.Unity.MeshGeneration.Factories.TerrainStrategies
 
 			if (!_meshData.ContainsKey(tile.UnwrappedTileId))
 			{
-				_meshData.Add(tile.UnwrappedTileId, tile.MeshFilter.sharedMesh);
+				_meshData.Add(tile.UnwrappedTileId, tile.MeshFilter.mesh);
 			}
 
 			if (_elevationOptions.colliderOptions.addCollider)

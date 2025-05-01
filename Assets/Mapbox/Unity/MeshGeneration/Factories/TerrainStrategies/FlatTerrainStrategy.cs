@@ -32,7 +32,7 @@ namespace Mapbox.Unity.MeshGeneration.Factories.TerrainStrategies
 			{
 				if (_elevationOptions.sideWallOptions.isActive)
 				{
-					var firstMat = tile.MeshRenderer.sharedMaterials[0];
+					var firstMat = tile.MeshRenderer.materials[0];
 					tile.MeshRenderer.materials = new Material[2]
 					{
 						firstMat,
