@@ -10,12 +10,14 @@ public class WaypointFollower : MonoBehaviour
     public WheelCollider rearRightWheel;
 
     public float maxMotorTorque = 1500f;
+    public float maxBrakeForce = 2000;
+
     public float maxSteerAngle = 30f;
     public float waypointThreshold = 3f;
 
     private int currentWaypointIndex = 0;
 
-    float motor;
+    float motor = 1000;
 
     float curentSpeed;
     float speedLimit = 20;
@@ -25,33 +27,86 @@ public class WaypointFollower : MonoBehaviour
 
     void FixedUpdate()
     {
+  
+
+        //Curent Vehicle Speed
         curentSpeed = carRigidbody.velocity.magnitude * 3.6f;
         
-        if(curentSpeed > speedLimit)
-        {
-            motor = 0.1f;
-        }
-        else
-        {
-            motor = maxMotorTorque;
-        }
+        //Geting WP, Setting it to local target, and calculating steer
         Transform target = waypoints[currentWaypointIndex];
         Vector3 localTarget = transform.InverseTransformPoint(target.position);
         float steer = Mathf.Clamp(localTarget.x / localTarget.magnitude, -1f, 1f);
-        
 
-        vehicleSpeedText.text = "Speed: " + curentSpeed.ToString("F1") + " km/h";
+        if (Vector3.Distance(transform.position, target.position) < waypointThreshold) 
+        {
+            if(currentWaypointIndex < waypoints.Length - 1)
+            {
+                currentWaypointIndex++;
+                EngineRunning(true);
+                ApllyBrakes(false);
+            }
+            else
+            {
+                EngineRunning(false);
+                ApllyBrakes(true);
+            }
+        }
 
+        //Aply Sterring
         frontLeftWheel.steerAngle = steer * maxSteerAngle;
         frontRightWheel.steerAngle = steer * maxSteerAngle;
 
-        rearLeftWheel.motorTorque = motor;
-        rearRightWheel.motorTorque = motor;
+        //Update UI
+        vehicleSpeedText.text = "Speed: " + curentSpeed.ToString("F1") + " km/h";
+
+        //Aply Motor Torque
+        if (curentSpeed > speedLimit)
+        {
+            EngineRunning(false);
+        }
+        else
+        {
+            EngineRunning(true);
+        }
 
         // Advance to next waypoint if close enough
-        if (Vector3.Distance(transform.position, target.position) < waypointThreshold)
+        //if (Vector3.Distance(transform.position, target.position) < waypointThreshold)
+        //{
+        //    currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
+        //}
+        
+        
+    }
+
+    private void EngineRunning(bool b)
+    {
+        if (b)
         {
-            currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
+            frontLeftWheel.motorTorque = motor;
+            frontRightWheel.motorTorque = motor;
+        }
+        else
+        {
+            frontLeftWheel.motorTorque = 0f;
+            frontRightWheel.motorTorque = 0f;
+        }
+    }
+
+    private void ApllyBrakes(bool b)
+    {
+        if (b) 
+        {
+            frontLeftWheel.brakeTorque = maxBrakeForce;
+            frontRightWheel.brakeTorque = maxBrakeForce;
+            rearLeftWheel.brakeTorque = maxBrakeForce;
+            rearRightWheel.brakeTorque = maxBrakeForce;
+        }
+        else
+        {
+            frontLeftWheel.brakeTorque = 0f;
+            frontRightWheel.brakeTorque = 0f;
+            rearLeftWheel.brakeTorque = 0f;
+            rearRightWheel.brakeTorque = 0f;
         }
     }
 }
