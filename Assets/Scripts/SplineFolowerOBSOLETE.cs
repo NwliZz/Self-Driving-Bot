@@ -18,7 +18,7 @@ public class SplineFollowerOBSOLETE : MonoBehaviour
 
     Navigation navigation;
     SimulationHandler simHandler;
-    SplineGenerator splineGenerator;
+    SplineManager splineGenerator;
 
     IReadOnlyList<Vector3> spline;
     int idx;
@@ -27,7 +27,7 @@ public class SplineFollowerOBSOLETE : MonoBehaviour
     {
         navigation = GetComponent<Navigation>();
         simHandler = GetComponent<SimulationHandler>();
-        splineGenerator = GetComponent<SplineGenerator>();
+        splineGenerator = GetComponent<SplineManager>();
         idx = 0;
     }
 

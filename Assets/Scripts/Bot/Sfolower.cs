@@ -37,7 +37,7 @@ public class SFollower : MonoBehaviour
         }
 
         Vector3 rearPos = simHandler.GetRearAxlePosition();
-        Vector3 target = navigation.GetLookAheadPoint(lookAheadDistance);
+        Vector3 target = navigation.splineManager.GetLookAheadPoint(lookAheadDistance, rearPos);
 
         // Steering
         Vector3 dirToTarget = (target - rearPos).normalized;
@@ -45,8 +45,8 @@ public class SFollower : MonoBehaviour
         simHandler.SetSteeringAngle(steerAngle);
 
         // Speed control
-        float curvature = CalculateCurvature(rearPos, target);
-        float normalized = Mathf.Clamp01(1f - (curvature / Mathf.Max(0.0001f, navigation.curvatureThreshold)));
+        float curvature = navigation.splineManager.CalculateCurvature(navigation.splineManager.FindClosestSplinePoint(rearPos));
+        float normalized = Mathf.Clamp01(1f - (curvature / Mathf.Max(0.0001f, navigation.splineManager.curvatureThreshold)));
         float speedMultiplier = Mathf.Lerp(minSpeedMultiplier, maxSpeedMultiplier, normalized);
         float adjustedDesiredSpeed = desiredSpeed * speedMultiplier;
 
@@ -80,7 +80,7 @@ public class SFollower : MonoBehaviour
         if (navigation == null || simHandler == null) return;
 
         Vector3 rear = simHandler.GetRearAxlePosition();
-        Vector3 lookAhead = navigation.GetLookAheadPoint(lookAheadDistance);
+        Vector3 lookAhead = navigation.splineManager.GetLookAheadPoint(lookAheadDistance, rear);
 
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(lookAhead, 0.3f);

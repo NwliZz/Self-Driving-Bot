@@ -10,29 +10,30 @@ public class Navigation : MonoBehaviour
     public float scanRadius = 7f;
     private float raycastDistance = 10f;
     private float raycastHeight = 5f;
-    private  float maxScanRadiusMultiplier = 2f;
+    private float maxScanRadiusMultiplier = 2f;
     private int rayCount = 31;
 
     [Header("Waypoint PlaceMent Settings")]
     public int waypointCount = 5;
     public float laneOffset = Mathf.Clamp01(0.1f);
 
-    [Header("Look Ahead Settings")]
-    public float curvatureThreshold = 0.5f; //fine-tune sensitivity to curves
-    private float minLookAheadDistance = 3.7f;
-    private float maxLookAheadDistance = 12f;
+
+
 
     private SimulationHandler simHandler;
     private WaypointManager waypointManager;
-    private SplineGenerator splineGenerator;
+    [HideInInspector]public SplineManager splineManager;
 
     // True if performing an ArcScan
     [HideInInspector] public bool isScanning = false;
 
     //Debug
-    [HideInInspector] public bool DEBUG = false;
+     public bool DEBUG = true;
 
     private Vector3 rearAxle;
+
+    private Vector3 wpPos;
+    private Quaternion wpRotation;
 
     private Vector3 lastScanPos;
     private Vector3 lastScanDir;
@@ -41,7 +42,7 @@ public class Navigation : MonoBehaviour
     {
         simHandler = GetComponent<SimulationHandler>();
         waypointManager = GetComponent<WaypointManager>();
-        splineGenerator = GetComponent<SplineGenerator>();
+        splineManager = GetComponent<SplineManager>();
     }
 
     private IEnumerator Start()
@@ -55,48 +56,75 @@ public class Navigation : MonoBehaviour
         lastScanPos = simHandler.GetRearAxlePosition();
         lastScanDir = transform.forward;
 
+        StartCoroutine(CreatePath());
+    }
+
+    private IEnumerator CreatePath()
+    {
         isScanning = true;
         for (int i = 0; i < waypointCount; i++)
             yield return StartCoroutine(GenerateSingleWaypointAsync());
         isScanning = false;
 
-        RegenerateSpline();
+        splineManager.RegenerateSpline(rearAxle, waypointManager.Waypoints);
 
-        if (DEBUG)
-            Debug.Log($"Navigation | Start: seeded {waypointCount} waypoints and generated spline");
+        
+        Debug.Log($"Navigation | Start: seeded {waypointCount} waypoints and generated spline");
     }
 
     private void Update()
     {
         if (isScanning) return;
 
-        Vector3 rearAxle = simHandler.GetRearAxlePosition();
+        rearAxle = simHandler.GetRearAxlePosition();
 
         if (waypointManager.Waypoints.Count > 0)
         {
-            if (DEBUG) Debug.Log($"Navigation | Update: Dist to WP[0] = {Vector3.Distance(rearAxle, waypointManager.Waypoints[0].transform.position):F2}");
+            Debug.Log($"Navigation | Update: Dist to WP[0] = {Vector3.Distance(rearAxle, waypointManager.Waypoints[0].transform.position):F2}");
             Debug.DrawLine(rearAxle, waypointManager.Waypoints[0].transform.position, Color.magenta);
 
             if (waypointManager.HasReachedWaypoint(rearAxle))
             {
                 waypointManager.RemoveFirstWaypoint();
-                if (DEBUG) Debug.Log($"Navigation | Update: Waypoint reached, {waypointManager.Waypoints.Count} left");
+
+                Debug.Log($"Navigation | Update: Waypoint reached, {waypointManager.Waypoints.Count} left");
+
                 StartCoroutine(GenerateSingleWaypointAsync());
                 return;
             }
             return;
         }
 
+        //Not Likely
         if (waypointManager.Waypoints.Count == 0)
         {
-            if (DEBUG) Debug.Log("Navigation | Update: No waypoints—regenerating full batch");
-            StartCoroutine(Start());
+            Debug.Log("Navigation | Update: No waypoints—regenerating full batch");
+            StartCoroutine(CreatePath());
         }
     }
+
+
 
     private IEnumerator GenerateSingleWaypointAsync()
     {
         isScanning = true;
+
+        //Scan and find position for wp
+        GetLanePosition(ArcScan());
+
+        //Place wp
+        waypointManager.CreateWaypoint(wpPos, wpRotation);
+
+        //Regenerate the Spline
+        splineManager.RegenerateSpline(rearAxle, waypointManager.Waypoints);
+
+        isScanning = false;
+        yield return null;
+    }
+    private List<Vector3> ArcScan()
+    {
+        //START ARCSCAN
+
 
         float radius = scanRadius;
         List<Vector3> roadHits = new List<Vector3>();
@@ -130,7 +158,7 @@ public class Navigation : MonoBehaviour
             {
                 radius = Mathf.Min(radius + scanRadius, scanRadius * maxScanRadiusMultiplier);
                 retries++;
-                if (DEBUG) Debug.Log($"Navigation | ArcScan retry {retries}, radius {radius:F2}");
+                Debug.Log($"Navigation | ArcScan retry {retries}, radius {radius:F2}");
             }
         } while (retry);
 
@@ -138,8 +166,15 @@ public class Navigation : MonoBehaviour
         {
             Debug.LogError("Navigation | GenerateSingleWaypointAsync: No road hits detected");
             isScanning = false;
-            yield break;
+            return roadHits;
         }
+        return roadHits;
+        //END - ARCSCAN
+
+    }
+
+    private void GetLanePosition(List<Vector3> roadHits)
+    {
 
         // Reference vector that points to the right of the vehicle's forward direction
         Vector3 rightAxis = Vector3.Cross(Vector3.up, lastScanDir).normalized;
@@ -167,100 +202,19 @@ public class Navigation : MonoBehaviour
 
         Vector3 middle = (leftMost + rightMost) * 0.5f;
         Vector3 laneCenter = (middle + rightMost) * 0.5f;
-        Vector3 wpPos = laneCenter + Vector3.up * 0.1f - transform.right * laneOffset;
+        wpPos = laneCenter + Vector3.up * 0.1f - transform.right * laneOffset;
 
-        if (DEBUG) Debug.Log($"Navigation | Placing waypoint at {wpPos}");
+        Debug.Log($"Navigation | Placing waypoint at {wpPos}");
 
         Vector3 wpDirection = (wpPos - lastScanPos).normalized;
-        Quaternion wpRotation = Quaternion.LookRotation(wpDirection, Vector3.up);
+        wpRotation = Quaternion.LookRotation(wpDirection, Vector3.up);
 
-        waypointManager.CreateWaypoint(wpPos, wpRotation);
-
+        //Update scanning state
         Vector3 prevPos = lastScanPos;
         lastScanPos = wpPos;
         lastScanDir = (wpPos - prevPos).normalized;
-
-        RegenerateSpline();
-
-        isScanning = false;
-        yield return null;
     }
 
-    private void RegenerateSpline()
-    {
-        List<Vector3> waypointPositions = new List<Vector3>();
-        foreach (var wp in waypointManager.Waypoints)
-        {
-            waypointPositions.Add(wp.transform.position);
-        }
 
-        Vector3 rearAxle = simHandler.GetRearAxlePosition();
-        splineGenerator.GenerateSpline(rearAxle, waypointPositions);
-    }
-
-    public Vector3 GetLookAheadPoint(float baseDistanceAhead)
-    {
-        Vector3 rear = simHandler.GetRearAxlePosition();
-        float accumulated = 0f;
-
-        // Find the closest point on the spline
-        int startIndex = FindClosestSplinePoint(rear);
-
-        // Calculate curvature and adjust look-ahead distance
-        float curvature = CalculateCurvature(startIndex);
-        float adjustedDistance = Mathf.Lerp(minLookAheadDistance, maxLookAheadDistance, 1 - curvature / curvatureThreshold);
-        adjustedDistance = Mathf.Clamp(adjustedDistance, minLookAheadDistance, baseDistanceAhead);
-
-        // Walk forward along the spline
-        Vector3 currentPoint = splineGenerator.SplinePoints[startIndex];
-        for (int i = startIndex; i < splineGenerator.SplinePoints.Count - 1; i++)
-        {
-            Vector3 nextPoint = splineGenerator.SplinePoints[i + 1];
-            float segmentDist = Vector3.Distance(currentPoint, nextPoint);
-
-            accumulated += segmentDist;
-
-            if (accumulated >= adjustedDistance)
-                return nextPoint;
-
-            currentPoint = nextPoint;
-        }
-
-        // If we run out of spline, return the last point
-        return splineGenerator.SplinePoints[^1];
-    }
-
-    private int FindClosestSplinePoint(Vector3 position)
-    {
-        int closestIndex = 0;
-        float closestDistance = float.MaxValue;
-
-        for (int i = 0; i < splineGenerator.SplinePoints.Count; i++)
-        {
-            float distance = Vector3.Distance(position, splineGenerator.SplinePoints[i]);
-            if (distance < closestDistance)
-            {
-                closestDistance = distance;
-                closestIndex = i;
-            }
-        }
-
-        return closestIndex;
-    }
-
-    private float CalculateCurvature(int index)
-    {
-        if (index <= 0 || index >= splineGenerator.SplinePoints.Count - 1)
-            return 0f;
-
-        Vector3 prev = splineGenerator.SplinePoints[index - 1];
-        Vector3 current = splineGenerator.SplinePoints[index];
-        Vector3 next = splineGenerator.SplinePoints[index + 1];
-
-        Vector3 v1 = current - prev;
-        Vector3 v2 = next - current;
-
-        float angle = Vector3.Angle(v1, v2);
-        return angle / Vector3.Distance(prev, next);
-    }
+   
 }
