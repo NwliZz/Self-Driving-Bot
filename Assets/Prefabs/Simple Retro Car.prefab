@@ -181,8 +181,10 @@ GameObject:
   m_Component:
   - component: {fileID: 785552131062046043}
   - component: {fileID: 4475936754333569631}
-  - component: {fileID: 1871879458723027578}
-  - component: {fileID: 1325071466610564078}
+  - component: {fileID: 3679368772002709720}
+  - component: {fileID: 2587652547249782607}
+  - component: {fileID: 7482714048356477460}
+  - component: {fileID: 4800261261807559796}
   m_Layer: 3
   m_Name: Simple Retro Car
   m_TagString: Car
@@ -242,7 +244,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &1871879458723027578
+--- !u!114 &3679368772002709720
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -251,13 +253,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1331959700625060684}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c31cc0ef743c8f5449f76051e6afea77, type: 3}
+  m_Script: {fileID: 11500000, guid: 9c1614c4d839f2d4597b540cdef02cc2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  waypointPrefab: {fileID: 9211623312101313145, guid: 9480cfd02355d28489b1c924b77a0d93, type: 3}
-  maxWaypoints: 50
-  CURRENT_TARGET: {fileID: 0}
---- !u!114 &1325071466610564078
+  desiredSpeed: 20
+  waypointReachThreshold: 1.8
+--- !u!114 &2587652547249782607
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -266,19 +267,61 @@ MonoBehaviour:
   m_GameObject: {fileID: 1331959700625060684}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a27b1876ce62f87409061c840db7590b, type: 3}
+  m_Script: {fileID: 11500000, guid: 07a971f308a17da438d3555d6a003aba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DEBUG: 0
+  scanRadius: 5
+  maxScanRadiusMultiplier: 2
+  raycastHeight: 5
+  raycastDistance: 15
+  rayCount: 31
+  waypointCount: 5
+  waypointReachThreshold: 1.8
+  waypointPrefab: {fileID: 9211623312101313145, guid: 9480cfd02355d28489b1c924b77a0d93, type: 3}
+  isScanning: 0
+--- !u!114 &7482714048356477460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1331959700625060684}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1ecfd6e1820fba4f81886d1be1d5098, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   frontLeftWheel: {fileID: 5164078117210285205}
   frontRightWheel: {fileID: 1695574917048209660}
   rearLeftWheel: {fileID: 8056336623824504260}
   rearRightWheel: {fileID: 6993087132568817772}
+  topSpeed: 30
   maxMotorTorque: 1500
-  maxBrakeForce: 2000
+  maxBrakeForce: 3000
   maxSteerAngle: 30
-  speedLimit: 20
+  trackWidth: 1.5
+  wheelbase: 2.5
+  engineBrakingPercent: 0.09
   carRigidbody: {fileID: 4475936754333569631}
+  driveType: 0
+  CURRENT_SPEED: 0
   vehicleSpeedText: {fileID: 0}
+--- !u!114 &4800261261807559796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1331959700625060684}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e94783eb236ee44aa6c2dd2435308a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  throttleSpeed: 100
+  brakeSpeed: 100
+  steeringSpeed: 30
 --- !u!1 &3958112152039300084
 GameObject:
   m_ObjectHideFlags: 0
@@ -724,8 +767,6 @@ GameObject:
   - component: {fileID: 6059839622599086008}
   - component: {fileID: 4923626891088265240}
   - component: {fileID: 4245564018708786129}
-  - component: {fileID: 4829040938461006621}
-  - component: {fileID: 1039715384251216413}
   - component: {fileID: 4878225342491335186}
   m_Layer: 3
   m_Name: Body
@@ -801,48 +842,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &4829040938461006621
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6659571049835922797}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 0
-  serializedVersion: 3
-  m_Size: {x: 1.6706227, y: 0.5873872, z: 4.3006043}
-  m_Center: {x: 0.0025981069, y: 0.5640439, z: 0.12866044}
---- !u!65 &1039715384251216413
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6659571049835922797}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 0
-  serializedVersion: 3
-  m_Size: {x: 1.5398812, y: 0.86250114, z: 2.0039222}
-  m_Center: {x: 0.04441023, y: 0.8571094, z: -0.11057603}
 --- !u!64 &4878225342491335186
 MeshCollider:
   m_ObjectHideFlags: 0

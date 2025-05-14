@@ -24,10 +24,10 @@ public class ManualCarController : MonoBehaviour
         sim.SetBrakePercent(brake);
 
 
-        float steerInput = 0f;
-        if (Input.GetKey(KeyCode.A)) steerInput = -steeringSpeed;
-        if (Input.GetKey(KeyCode.D)) steerInput = steeringSpeed;
-        sim.SetSteeringAngle(steerInput);
+        float steerPercent = 0f;
+        if (Input.GetKey(KeyCode.A)) steerPercent = -100f;
+        if (Input.GetKey(KeyCode.D)) steerPercent = 100;
+        sim.SetSteeringAngle(steerPercent);
 
 
     }

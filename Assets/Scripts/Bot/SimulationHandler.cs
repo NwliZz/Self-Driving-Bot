@@ -14,7 +14,9 @@ public class SimulationHandler : MonoBehaviour
     [SerializeField] private float topSpeed = 30f;            // km/h
     [SerializeField] private float maxMotorTorque = 1500f;
     [SerializeField] private float maxBrakeForce = 3000f;
-    [SerializeField] private float maxSteerAngle = 30f;
+    [SerializeField] public float maxSteerAngle = 30f;
+    [SerializeField]private float trackWidth = 1.5f;
+    [SerializeField]private float wheelbase = 2.5f;
 
     [Header("Engine Braking")]
     [Range(0f, 1f)] public float engineBrakingPercent = 0.09f; // 9% of max brake force
@@ -70,9 +72,13 @@ public class SimulationHandler : MonoBehaviour
         brakeInput = percent / 100f;
     }
 
-    public void SetSteeringAngle(float angleDegrees)
+    /// <summary>
+    /// SetSteeringAngle In degrees
+    /// </summary>
+    /// <param name="deg"></param>
+    public void SetSteeringAngle(float deg)
     {
-        steerInput = Mathf.Clamp(angleDegrees, -maxSteerAngle, maxSteerAngle);
+        steerInput = Mathf.Clamp(deg, -maxSteerAngle, maxSteerAngle);
     }
 
     private void ApplyMotor(float throttle)
@@ -134,12 +140,86 @@ public class SimulationHandler : MonoBehaviour
 
         rearLeftWheel.brakeTorque = rearBrake;
         rearRightWheel.brakeTorque = rearBrake;
-        Debug.Log($"Front brake: {frontBrake}, Rear brake: {rearBrake}");
     }
+
+
 
     private void ApplySteering(float angle)
     {
-        frontLeftWheel.steerAngle = angle;
-        frontRightWheel.steerAngle = angle;
+        // 1) Early out if nearly straight
+        if (Mathf.Abs(angle) < 0.01f)
+        {
+            frontLeftWheel.steerAngle = 0f;
+            frontRightWheel.steerAngle = 0f;
+            return;
+        }
+
+        // 2) Clamp the requested angle to your car's max steer angle
+        angle = Mathf.Clamp(angle, -maxSteerAngle, maxSteerAngle);
+
+        // 3) Compute turning radius
+        float absAngleRad = Mathf.Deg2Rad * Mathf.Abs(angle);
+        float turningRadius = wheelbase / Mathf.Tan(absAngleRad);
+
+        // 4) Safety: ensure we don't divide by zero or negative radius
+        float halfTrack = trackWidth * 0.5f;
+        turningRadius = Mathf.Max(turningRadius, halfTrack + 0.01f);
+
+        // 5) Compute individual wheel angles
+        float innerAngleRad = Mathf.Atan(wheelbase / (turningRadius - halfTrack));
+        float outerAngleRad = Mathf.Atan(wheelbase / (turningRadius + halfTrack));
+
+        float innerDeg = Mathf.Rad2Deg * innerAngleRad;
+        float outerDeg = Mathf.Rad2Deg * outerAngleRad;
+
+        // 6) Assign to wheel colliders based on turn direction
+        if (angle > 0) // turning right -> inner is right wheel
+        {
+            frontLeftWheel.steerAngle = outerDeg;
+            frontRightWheel.steerAngle = innerDeg;
+        }
+        else // turning left -> inner is left wheel
+        {
+            frontLeftWheel.steerAngle = -innerDeg;
+            frontRightWheel.steerAngle = -outerDeg;
+        }
+
+        // 7) Optional debug: draw the car-forward vector from the rear axle
+        Vector3 rearAxle = GetRearAxlePosition();
+        Debug.DrawRay(rearAxle, transform.forward * 5f, Color.green);
     }
+
+    private void OnDrawGizmos()
+    {
+        if (Mathf.Abs(steerInput) < 0.01f) return;
+
+        // 1) Get the true pivot: the midpoint between the two rear wheels
+        Vector3 rearAxleMid = GetRearAxlePosition();
+
+        // 3) Turning radius from your current steer angle
+        float radius = wheelbase / Mathf.Tan(Mathf.Deg2Rad * Mathf.Abs(steerInput));
+
+        // 4) Offset sideways from the rear axle toward the center
+        Vector3 pivotOffset = steerInput < 0 ? -transform.right * radius : transform.right * radius;
+
+        // 5) Final center of rotation in world space
+        Vector3 centerOfRotation = rearAxleMid + pivotOffset;
+
+        // 6) Draw
+        Gizmos.color = Color.red;
+        Gizmos.DrawSphere(centerOfRotation, 0.2f);
+        Gizmos.DrawLine(rearAxleMid, centerOfRotation);
+    }
+
+    public Vector3 GetRearAxlePosition()
+    {
+        return (rearLeftWheel.transform.position + rearRightWheel.transform.position) / 2f;
+    }
+
+    // Uncomment this if you want to use the old steering method
+    //private void ApplySteering(float angle)
+    //{
+    //    frontLeftWheel.steerAngle = angle;
+    //    frontRightWheel.steerAngle = angle;
+    //}
 }
