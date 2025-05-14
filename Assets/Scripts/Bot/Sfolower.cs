@@ -18,14 +18,11 @@ public class SFollower : MonoBehaviour
     [Tooltip("Maximum speed multiplier for straight paths")]
     public float maxSpeedMultiplier = 1.0f;
 
-    private Vector3 rearAxle;
-
     private Navigation navigation;
     private SimulationHandler simHandler;
 
     void Start()
     {
-        rearAxle = simHandler.GetRearAxlePosition();
         navigation = GetComponent<Navigation>();
         simHandler = GetComponent<SimulationHandler>();
     }
@@ -39,16 +36,16 @@ public class SFollower : MonoBehaviour
             return;
         }
 
-;
+        Vector3 rearPos = simHandler.GetRearAxlePosition();
         Vector3 target = navigation.GetLookAheadPoint(lookAheadDistance);
 
         // Steering
-        Vector3 dirToTarget = (target - rearAxle).normalized;
+        Vector3 dirToTarget = (target - rearPos).normalized;
         float steerAngle = Vector3.SignedAngle(transform.forward, dirToTarget, Vector3.up);
         simHandler.SetSteeringAngle(steerAngle);
 
         // Speed control
-        float curvature = CalculateCurvature(rearAxle, target);
+        float curvature = CalculateCurvature(rearPos, target);
         float normalized = Mathf.Clamp01(1f - (curvature / Mathf.Max(0.0001f, navigation.curvatureThreshold)));
         float speedMultiplier = Mathf.Lerp(minSpeedMultiplier, maxSpeedMultiplier, normalized);
         float adjustedDesiredSpeed = desiredSpeed * speedMultiplier;
@@ -63,9 +60,9 @@ public class SFollower : MonoBehaviour
         else
         {
             simHandler.SetThrottlePercent(0f);
-            float brakePercent = Mathf.Lerp(5f, 50f, (currentSpeed - adjustedDesiredSpeed) / adjustedDesiredSpeed);
+            float brakePercent = Mathf.Lerp(5f, 80f, (currentSpeed - adjustedDesiredSpeed) / adjustedDesiredSpeed);
             simHandler.SetBrakePercent(brakePercent);
-            Debug.Log(brakePercent);
+
         }
     }
 
@@ -82,10 +79,11 @@ public class SFollower : MonoBehaviour
     {
         if (navigation == null || simHandler == null) return;
 
+        Vector3 rear = simHandler.GetRearAxlePosition();
         Vector3 lookAhead = navigation.GetLookAheadPoint(lookAheadDistance);
 
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(lookAhead, 0.3f);
-        Gizmos.DrawLine(rearAxle, lookAhead);
+        Gizmos.DrawLine(rear, lookAhead);
     }
 }
