@@ -6,30 +6,33 @@ using UnityEngine;
 [RequireComponent(typeof(SimulationHandler))]
 public class Navigation : MonoBehaviour
 {
-    [Header("Debug")]
-    public bool DEBUG = false;
-
     [Header("Scanning Settings")]
     public float scanRadius = 7f;
-    public int waypointCount = 5;
-
     private float raycastDistance = 10f;
     private float raycastHeight = 5f;
     private  float maxScanRadiusMultiplier = 2f;
     private int rayCount = 31;
 
-
+    [Header("Waypoint PlaceMent Settings")]
+    public int waypointCount = 5;
+    public float laneOffset = Mathf.Clamp01(0.1f);
 
     [Header("Look Ahead Settings")]
-    private float minLookAheadDistance = 2f;
-    private float maxLookAheadDistance = 10f;
-    public float curvatureThreshold = 0.5f; // Adjust this value to fine-tune sensitivity to curves
+    public float curvatureThreshold = 0.5f; //fine-tune sensitivity to curves
+    private float minLookAheadDistance = 3.7f;
+    private float maxLookAheadDistance = 12f;
 
     private SimulationHandler simHandler;
     private WaypointManager waypointManager;
     private SplineGenerator splineGenerator;
 
-    public bool isScanning = false;
+    // True if performing an ArcScan
+    [HideInInspector] public bool isScanning = false;
+
+    //Debug
+    [HideInInspector] public bool DEBUG = false;
+
+    private Vector3 rearAxle;
 
     private Vector3 lastScanPos;
     private Vector3 lastScanDir;
@@ -43,6 +46,8 @@ public class Navigation : MonoBehaviour
 
     private IEnumerator Start()
     {
+        rearAxle = simHandler.GetRearAxlePosition();
+
         if (waypointManager.waypointPrefab == null)
         {
             Debug.LogError("Navigation | Start: waypointPrefab is not assigned!");
@@ -66,8 +71,6 @@ public class Navigation : MonoBehaviour
     private void Update()
     {
         if (isScanning) return;
-
-        Vector3 rearAxle = simHandler.GetRearAxlePosition();
 
         if (waypointManager.Waypoints.Count > 0)
         {
@@ -164,7 +167,7 @@ public class Navigation : MonoBehaviour
 
         Vector3 middle = (leftMost + rightMost) * 0.5f;
         Vector3 laneCenter = (middle + rightMost) * 0.5f;
-        Vector3 wpPos = laneCenter + Vector3.up * 0.1f;
+        Vector3 wpPos = laneCenter + Vector3.up * 0.1f - transform.right * laneOffset;
 
         if (DEBUG) Debug.Log($"Navigation | Placing waypoint at {wpPos}");
 
@@ -190,27 +193,24 @@ public class Navigation : MonoBehaviour
         {
             waypointPositions.Add(wp.transform.position);
         }
-
-        Vector3 rearAxle = simHandler.GetRearAxlePosition();
         splineGenerator.GenerateSpline(rearAxle, waypointPositions);
     }
 
     public Vector3 GetLookAheadPoint(float baseDistanceAhead)
     {
-        Vector3 rear = simHandler.GetRearAxlePosition();
         float accumulated = 0f;
 
         // Find the closest point on the spline
-        int startIndex = FindClosestSplinePoint(rear);
+        int splitePointIndex = FindClosestSplinePoint();
 
         // Calculate curvature and adjust look-ahead distance
-        float curvature = CalculateCurvature(startIndex);
+        float curvature = CalculateCurvature(splitePointIndex);
         float adjustedDistance = Mathf.Lerp(minLookAheadDistance, maxLookAheadDistance, 1 - curvature / curvatureThreshold);
         adjustedDistance = Mathf.Clamp(adjustedDistance, minLookAheadDistance, baseDistanceAhead);
 
         // Walk forward along the spline
-        Vector3 currentPoint = splineGenerator.SplinePoints[startIndex];
-        for (int i = startIndex; i < splineGenerator.SplinePoints.Count - 1; i++)
+        Vector3 currentPoint = splineGenerator.SplinePoints[splitePointIndex];
+        for (int i = splitePointIndex; i < splineGenerator.SplinePoints.Count - 1; i++)
         {
             Vector3 nextPoint = splineGenerator.SplinePoints[i + 1];
             float segmentDist = Vector3.Distance(currentPoint, nextPoint);
@@ -227,14 +227,14 @@ public class Navigation : MonoBehaviour
         return splineGenerator.SplinePoints[^1];
     }
 
-    private int FindClosestSplinePoint(Vector3 position)
+    private int FindClosestSplinePoint()
     {
         int closestIndex = 0;
         float closestDistance = float.MaxValue;
 
         for (int i = 0; i < splineGenerator.SplinePoints.Count; i++)
         {
-            float distance = Vector3.Distance(position, splineGenerator.SplinePoints[i]);
+            float distance = Vector3.Distance(rearAxle, splineGenerator.SplinePoints[i]);
             if (distance < closestDistance)
             {
                 closestDistance = distance;
