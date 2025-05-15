@@ -7,8 +7,9 @@ public class SplineManager : MonoBehaviour
 {
     [Header("Look Ahead Settings")]
     public float curvatureThreshold = 0.5f; //fine-tune sensitivity to curves
-    private float minLookAheadDistance = 3.7f;
-    private float maxLookAheadDistance = 12f;
+    public float minLookAheadDistance = 3.7f;
+    public float maxLookAheadDistance = 12f;
+    public float angleThreshold = 10f;
 
     public int subdivisionsPerSegment = 8;
 
@@ -38,7 +39,7 @@ public class SplineManager : MonoBehaviour
 
         // Add extra control points for a smoother start and end
         control.Insert(0, control[0]);
-        control.Add(control[control.Count - 1]);
+        //control.Add(control[control.Count - 1]);
 
         for (int i = 0; i < control.Count - 3; i++)
         {
@@ -80,8 +81,12 @@ public class SplineManager : MonoBehaviour
         return angle / Vector3.Distance(prev, next);
     }
 
+
     public int FindClosestSplinePoint(Vector3 position)
     {
+        if (SplinePoints == null || SplinePoints.Count == 0)
+            return -1;
+
         int closestIndex = 0;
         float closestDistance = float.MaxValue;
 
@@ -98,27 +103,57 @@ public class SplineManager : MonoBehaviour
         return closestIndex;
     }
 
-    public Vector3 GetLookAheadPoint(float baseDistanceAhead, Vector3 rearAxle)
+    private float CalculateCurvature(Vector3 start, Vector3 end)
     {
 
-        float accumulated = 0f;
+        Vector3 toEnd = end - start;
+        float distance = toEnd.magnitude;
+        Vector3 direction = toEnd / distance;
+        float angle = Vector3.Angle(transform.forward, direction);
+        return angle / distance;
+    }
 
-        // Find the closest point on the spline
+    public Vector3 GetLookAheadPoint(Vector3 rearAxle)
+    {
+
+        // Ensure spline exists
+        if (splinePoints == null || splinePoints.Count < 2)
+        {
+            
+            Debug.LogWarning("SplineManager | SplinePoints not initialized or too short.");
+            return rearAxle;
+        }
+
+        // Find the closest spline index
         int startIndex = FindClosestSplinePoint(rearAxle);
+        if (startIndex < 0 || startIndex >= splinePoints.Count)
+        {
+            Debug.LogWarning($"SplineManager | Invalid startIndex: {startIndex}");
+            return rearAxle;
+        }
 
-        // Calculate curvature and adjust look-ahead distance
+        // Compute curvature-adjusted distance
         float curvature = CalculateCurvature(startIndex);
         float adjustedDistance = Mathf.Lerp(minLookAheadDistance, maxLookAheadDistance, 1 - curvature / curvatureThreshold);
-        adjustedDistance = Mathf.Clamp(adjustedDistance, minLookAheadDistance, baseDistanceAhead);
+        adjustedDistance = Mathf.Clamp(adjustedDistance, minLookAheadDistance, maxLookAheadDistance);
 
-        // Walk forward along the spline
-        Vector3 currentPoint = SplinePoints[startIndex];
-        for (int i = startIndex; i < SplinePoints.Count - 1; i++)
-        {   
-            Vector3 nextPoint = SplinePoints[i + 1];
+        // Walk forward along the spline and only consider points within +/-30°
+        float accumulated = 0f;
+        Vector3 currentPoint = splinePoints[startIndex];
+        for (int i = startIndex; i < splinePoints.Count - 1; i++)
+        {
+            Vector3 nextPoint = splinePoints[i + 1];
             float segmentDist = Vector3.Distance(currentPoint, nextPoint);
-
             accumulated += segmentDist;
+
+            // Check horizontal angle from rear axle
+            Vector3 toPt = nextPoint - rearAxle;
+            float horizontalAngle = Vector3.SignedAngle(transform.forward, toPt.normalized, Vector3.up);
+            if (Mathf.Abs(horizontalAngle) > 20f)
+            {
+                currentPoint = nextPoint;
+                continue;
+            }
 
             if (accumulated >= adjustedDistance)
                 return nextPoint;
@@ -126,9 +161,83 @@ public class SplineManager : MonoBehaviour
             currentPoint = nextPoint;
         }
 
-        // If we run out of spline, return the last point
-        return SplinePoints[^1];
+        // If no valid point found, return the last spline sample within FOV
+        for (int j = splinePoints.Count - 1; j >= 0; j--)
+        {
+            Vector3 candidate = splinePoints[j];
+            Vector3 toPt = candidate - rearAxle;
+            float angle = Vector3.SignedAngle(transform.forward, toPt.normalized, Vector3.up);
+            if (Mathf.Abs(angle) <= 30f)
+                return candidate;
+        }
+
+        // Fallback
+        return rearAxle;
     }
 
 
+    //public Vector3 GetLookAheadPoint(Vector3 rearAxle)
+    //{
+
+    //    float accumulated = 0f;
+
+    //    if (SplinePoints == null || SplinePoints.Count < 2)
+    //    {
+    //        Debug.LogWarning("SplineManager | SplinePoints not initialized or too short.");
+    //        return rearAxle; // or transform.position
+    //    }
+
+    //    Find the closest point on the spline
+
+    //    int startIndex = FindClosestSplinePoint(rearAxle);
+
+    //    if (startIndex < 0 || startIndex >= SplinePoints.Count)
+    //    {
+    //        Debug.LogWarning($"SplineManager | Invalid startIndex: {startIndex}");
+    //        return rearAxle;
+    //    }
+
+    //    Calculate curvature and adjust look - ahead distance
+    //    float curvature = CalculateCurvature(startIndex);
+    //    float adjustedDistance = Mathf.Lerp(minLookAheadDistance, maxLookAheadDistance, 1 - curvature / curvatureThreshold);
+    //    adjustedDistance = Mathf.Clamp(adjustedDistance, minLookAheadDistance, maxLookAheadDistance);
+
+    //    Walk forward along the spline
+    //   Vector3 currentPoint = SplinePoints[startIndex];
+    //    for (int i = startIndex; i < SplinePoints.Count - 1; i++)
+    //    {
+    //        Vector3 nextPoint = SplinePoints[i + 1];
+    //        float segmentDist = Vector3.Distance(currentPoint, nextPoint);
+
+    //        accumulated += segmentDist;
+
+    //        if (accumulated >= adjustedDistance)
+    //            return nextPoint;
+
+    //        currentPoint = nextPoint;
+    //    }
+
+    //    If we run out of spline, return the last point
+    //    return SplinePoints[^1];
+    //}
+
+    private void OnDrawGizmos()
+    {
+        if (splinePoints == null || splinePoints.Count < 2)
+            return;
+
+        // Draw the spline segments
+        Gizmos.color = Color.yellow;
+        for (int i = 0; i < splinePoints.Count - 1; i++)
+        {
+            Gizmos.DrawLine(splinePoints[i], splinePoints[i + 1]);
+        }
+
+        // Draw a small sphere at each sample point
+        Gizmos.color = Color.red;
+        foreach (var pt in splinePoints)
+        {
+            Gizmos.DrawSphere(pt, 0.1f);
+        }
+    }
 }

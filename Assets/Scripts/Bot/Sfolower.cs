@@ -10,10 +10,9 @@ public class SFollower : MonoBehaviour
     [Tooltip("Desired cruising speed (km/h)")]
     public float desiredSpeed = 15f;
     [Tooltip("How far ahead to look for the next sample")]
-    public float lookAheadDistance = 5f;
+    //public float lookAheadDistance = 5f;
 
     [Header("Adaptive Speed Control")]
-    [Tooltip("Minimum speed multiplier for sharp turns")]
     public float minSpeedMultiplier = 0.5f;
     [Tooltip("Maximum speed multiplier for straight paths")]
     public float maxSpeedMultiplier = 1.0f;
@@ -29,7 +28,7 @@ public class SFollower : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (navigation.isScanning)
+        if (navigation.waypointManager.isScanning)
         {
             simHandler.SetThrottlePercent(0f);
             simHandler.SetBrakePercent(holdBrakePercent);
@@ -37,7 +36,7 @@ public class SFollower : MonoBehaviour
         }
 
         Vector3 rearPos = simHandler.GetRearAxlePosition();
-        Vector3 target = navigation.splineManager.GetLookAheadPoint(lookAheadDistance, rearPos);
+        Vector3 target = navigation.splineManager.GetLookAheadPoint(rearPos);
 
         // Steering
         Vector3 dirToTarget = (target - rearPos).normalized;
@@ -51,6 +50,7 @@ public class SFollower : MonoBehaviour
         float adjustedDesiredSpeed = desiredSpeed * speedMultiplier;
 
         float currentSpeed = simHandler.CURRENT_SPEED;
+
         if (currentSpeed < adjustedDesiredSpeed)
         {
             float throttlePercent = Mathf.Lerp(20f, 60f, (adjustedDesiredSpeed - currentSpeed) / adjustedDesiredSpeed);
@@ -60,27 +60,19 @@ public class SFollower : MonoBehaviour
         else
         {
             simHandler.SetThrottlePercent(0f);
-            float brakePercent = Mathf.Lerp(5f, 80f, (currentSpeed - adjustedDesiredSpeed) / adjustedDesiredSpeed);
+            float brakePercent = Mathf.Lerp(5f, 100f, (currentSpeed - adjustedDesiredSpeed) / adjustedDesiredSpeed);
             simHandler.SetBrakePercent(brakePercent);
-
         }
     }
 
-    private float CalculateCurvature(Vector3 start, Vector3 end)
-    {
-        Vector3 toEnd = end - start;
-        float distance = toEnd.magnitude;
-        Vector3 direction = toEnd / distance;
-        float angle = Vector3.Angle(transform.forward, direction);
-        return angle / distance;
-    }
+
 
     private void OnDrawGizmos()
     {
         if (navigation == null || simHandler == null) return;
 
         Vector3 rear = simHandler.GetRearAxlePosition();
-        Vector3 lookAhead = navigation.splineManager.GetLookAheadPoint(lookAheadDistance, rear);
+        Vector3 lookAhead = navigation.splineManager.GetLookAheadPoint(rear);
 
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(lookAhead, 0.3f);

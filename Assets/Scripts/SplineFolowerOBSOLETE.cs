@@ -34,7 +34,7 @@ public class SplineFollowerOBSOLETE : MonoBehaviour
     void FixedUpdate()
     {
         // 1) Pause whenever nav is still scanning
-        if (navigation.isScanning)
+        if (navigation.waypointManager.isScanning)
         {
             simHandler.SetThrottlePercent(0f);
             simHandler.SetBrakePercent(holdBrakePercent);
