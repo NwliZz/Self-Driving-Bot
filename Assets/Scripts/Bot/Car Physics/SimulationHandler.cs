@@ -22,7 +22,7 @@ public class SimulationHandler : MonoBehaviour
     [Range(0f, 1f)] public float engineBrakingPercent = 0.09f; // 9% of max brake force
 
     [Header("Debug Info")]
-    [SerializeField] private Rigidbody carRigidbody;
+    [SerializeField] public Rigidbody carRigidbody;
 
     [Header("Drivetrain Settings")]
     public DriveType driveType;
@@ -37,6 +37,8 @@ public class SimulationHandler : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI vehicleSpeedText;
 
+
+
     //Drive train type
     public enum DriveType
     {
@@ -44,6 +46,7 @@ public class SimulationHandler : MonoBehaviour
         RWD,
         AWD
     }
+
 
     private void FixedUpdate()
     {
@@ -62,7 +65,7 @@ public class SimulationHandler : MonoBehaviour
 
     public void SetThrottlePercent(float percent)
     {
-        //percent = Mathf.Clamp(percent, 0f, 100f);
+        percent = Mathf.Clamp(percent, 0f, 100f);
         throttleInput = percent / 100f;
     } 
 
@@ -125,11 +128,13 @@ public class SimulationHandler : MonoBehaviour
     {
         float totalBrakeForce = brake * maxBrakeForce;
 
-        // Add engine braking only if throttle is fully released
+        // Add engine braking - Not working well* 
         //if (throttleInput <= 0.01f)
         //{
         //    totalBrakeForce += engineBrakingPercent * maxBrakeForce;
         //}
+
+
 
         // Distribute brake force between front and rear wheels
         float frontBrake = totalBrakeForce * 0.7f; 
@@ -146,7 +151,7 @@ public class SimulationHandler : MonoBehaviour
 
     private void ApplySteering(float angle)
     {
-        // 1) Early out if nearly straight
+        // Early out if nearly straight
         if (Mathf.Abs(angle) < 0.01f)
         {
             frontLeftWheel.steerAngle = 0f;
@@ -154,15 +159,17 @@ public class SimulationHandler : MonoBehaviour
             return;
         }
 
-        // 2) Clamp the requested angle to your car's max steer angle
+        // Steer angle limit
         angle = Mathf.Clamp(angle, -maxSteerAngle, maxSteerAngle);
 
-        // 3) Compute turning radius
+        // Compute turning radius
         float absAngleRad = Mathf.Deg2Rad * Mathf.Abs(angle);
         float turningRadius = wheelbase / Mathf.Tan(absAngleRad);
 
-        // 4) Safety: ensure we don't divide by zero or negative radius
+
         float halfTrack = trackWidth * 0.5f;
+
+        // Safety, don't divide by zero or negative radius
         turningRadius = Mathf.Max(turningRadius, halfTrack + 0.01f);
 
         // 5) Compute individual wheel angles
@@ -184,7 +191,7 @@ public class SimulationHandler : MonoBehaviour
             frontRightWheel.steerAngle = -outerDeg;
         }
 
-        // 7) Optional debug: draw the car-forward vector from the rear axle
+        // debug
         Vector3 rearAxle = GetRearAxlePosition();
         Debug.DrawRay(rearAxle, transform.forward * 5f, Color.green);
     }

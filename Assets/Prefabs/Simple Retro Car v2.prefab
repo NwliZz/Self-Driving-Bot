@@ -800,11 +800,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30f89185aa6063f43b6467ff2483cc10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scanRadius: 7
-  waypointCount: 5
-  laneOffset: 0.1
-  curvatureThreshold: 0.55
-  isScanning: 0
+  waypointManager: {fileID: 0}
+  splineManager: {fileID: 0}
   DEBUG: 0
 --- !u!114 &6094356722431885325
 MonoBehaviour:
@@ -820,6 +817,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   waypointPrefab: {fileID: 9211623312101313145, guid: 9480cfd02355d28489b1c924b77a0d93, type: 3}
   waypointReachThreshold: 3
+  isScanning: 0
+  wpSpacing: 5
+  scanRadius: 7
+  waypointCount: 10
+  laneOffset: 0.3
+  rearAxle: {x: 0, y: 0, z: 0}
+  wpCounter: 0
 --- !u!114 &7685390114519159107
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -832,7 +836,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd661503716a76040997a7b4b880537b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  subdivisionsPerSegment: 8
+  curvatureThreshold: 4
+  lookaheadGain: 0.38
+  minLookAheadDistance: 3
+  maxLookAheadDistance: 10
+  subdivisionsPerSegment: 30
+  rearAxle: {x: 0, y: 0, z: 0}
 --- !u!114 &6274188422912185144
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -846,10 +855,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   holdBrakePercent: 100
-  desiredSpeed: 20
-  lookAheadDistance: 15
-  minSpeedMultiplier: 0.7
-  maxSpeedMultiplier: 4
+  desiredSpeed: 25.1
+  minSpeedMultiplier: 0.5
+  maxSpeedMultiplier: 2
 --- !u!114 &7664568074125738531
 MonoBehaviour:
   m_ObjectHideFlags: 0

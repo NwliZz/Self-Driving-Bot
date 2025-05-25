@@ -1,6 +1,4 @@
-using Mapbox.Directions;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(SimulationHandler))]
@@ -16,9 +14,6 @@ public class Navigation : MonoBehaviour
 
     private Vector3 rearAxle;
 
-    private int wpCounter;
-
-    //private bool isFirstscan = true;
 
     private void Awake()
     {
@@ -27,67 +22,63 @@ public class Navigation : MonoBehaviour
         splineManager = GetComponent<SplineManager>();
     }
 
-    private IEnumerator Start()
+    private void Start()
     {
 
         rearAxle = simHandler.GetRearAxlePosition();
 
-        yield return StartCoroutine(waypointManager.CreatePath(rearAxle));
-        RegenSpline();
-
-        
-        yield return null;
+        waypointManager.CreatePath(rearAxle);
+        splineManager.GenerateSplinePath();
 
     }
 
     private void Update()
     {
+        rearAxle = simHandler.GetRearAxlePosition();
+
+        waypointManager.rearAxle = rearAxle;
+        splineManager.rearAxle = rearAxle;
 
         if (waypointManager.isScanning) return;
 
 
-        //Curent WP Managment
-        rearAxle = simHandler.GetRearAxlePosition();
-        if (waypointManager.Waypoints.Count > 0)
+        if (waypointManager.Waypoints.Count > 2)
         {
+            //TargetWayoint
+            Debug.DrawLine(rearAxle, waypointManager.Waypoints[2].transform.position, Color.magenta);
 
-            if (DEBUG) Debug.Log($"Navigation | Update: Dist to WP[0] = {Vector3.Distance(rearAxle, waypointManager.Waypoints[0].transform.position):F2}");
-            Debug.DrawLine(rearAxle, waypointManager.Waypoints[0].transform.position, Color.magenta);
+            if (DEBUG) Debug.Log($"Navigation | Update: Dist to WP[0] = {Vector3.Distance(rearAxle, waypointManager.Waypoints[1].transform.position):F2}");
 
-
-            if (waypointManager.HasReachedWaypoint(rearAxle))
-            {
-                if (DEBUG) Debug.Log($"Navigation | Update: Waypoint reached, regenerating for que...");
-
-                StartCoroutine(AddWP());
-                RegenSpline();
-
-
-                return;
-            }
-            return;
+            //if (waypointManager.wpCounter >= 4)
+            //{
+            //    RegenSpline();
+            //    waypointManager.wpCounter = 0;
+            //}
         }
 
-       
-
-
-
-        //Not Likely
-        if (waypointManager.Waypoints.Count == 0)
-        {
-            Debug.Log("Navigation | Update: No waypoints—regenerating full batch");
-            StartCoroutine(waypointManager.CreatePath(rearAxle));
-        }
-    }
-
-    private IEnumerator AddWP()
-    {
-        yield return StartCoroutine(waypointManager.GenerateWaypoint());
 
     }
 
-    public void RegenSpline()
+    private void UpdateSplinePath()
     {
-        splineManager.RegenerateSpline(rearAxle, waypointManager.Waypoints);
+        //- SPLINE PATH LOGIC
+        //splineManager.RemoveSegment();
+        //splineManager.AddSegment(waypointManager.Waypoints);
+
+
+
+    }
+
+    public Vector3 GetLookAheadPoint()
+    {
+        if (waypointManager.isScanning)
+        {
+            Debug.LogWarning("Navigation | GetLookAheadPoint: Cannot get point, Waypoint Manager is scanning...");
+            return rearAxle;
+        }
+        else
+        {
+            return splineManager.GetLookAheadPoint(rearAxle, simHandler.CURRENT_SPEED);
+        }
     }
 }

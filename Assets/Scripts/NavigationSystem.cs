@@ -164,3 +164,22 @@ public class NavigationSystem : MonoBehaviour
         }
     }
 }
+
+
+
+
+
+
+
+
+
+//_____________-----------------______________________--------------------_____________
+//private float CalculateCurvature(Vector3 start, Vector3 end)
+//{
+
+//    Vector3 toEnd = end - start;
+//    float distance = toEnd.magnitude;
+//    Vector3 direction = toEnd / distance;
+//    float angle = Vector3.Angle(transform.forward, direction);
+//    return angle / distance;
+//}

@@ -1,20 +1,28 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
 
 public class WaypointManager : MonoBehaviour
 {
     public GameObject waypointPrefab;
+
+
     public float waypointReachThreshold = 1.8f;
 
+    //Local wp List
     private List<GameObject> waypoints = new List<GameObject>();
+    //Read Only wp list
     public IReadOnlyList<GameObject> Waypoints => waypoints;
 
     // True if performing an ArcScan
     [HideInInspector] public bool isScanning = false;
 
     [Header("Scanning Settings")]
+
+    public float wpSpacing = 3f;
+
     public float scanRadius = 7f;
+
     private float raycastDistance = 10f;
     private float raycastHeight = 5f;
     private float maxScanRadiusMultiplier = 2f;
@@ -23,56 +31,59 @@ public class WaypointManager : MonoBehaviour
     //Placement Settings
     [Header("Waypoint PlaceMent Settings")]
     public int waypointCount = 5;
-    public float laneOffset = Mathf.Clamp01(0.1f);
+    public float laneOffset;
     private Vector3 wpPos;
     private Quaternion wpRotation;
 
     private Vector3 lastScanPos;
     private Vector3 lastScanDir;
 
+    public Vector3 rearAxle;
+
+    private bool firstWPreached = true;
+    public int wpCounter;
+
+    private SplineManager splineManager;
+
     private void Start()
     {
+        splineManager = GetComponent<SplineManager>();
     }
 
-    public void CreateWaypoint(Vector3 position, Quaternion rotation)
+    private void Update()
     {
-        GameObject wp = Instantiate(waypointPrefab, position, rotation);
-        waypoints.Add(wp);
-    }
-
-    public bool RemoveFirstWaypoint()
-    {
-        if (waypoints.Count > 0)
+        //Not Likely
+        if (Waypoints.Count == 0)
         {
-            Destroy(waypoints[0]);
-            waypoints.RemoveAt(0);
-            return true;
+            Debug.Log("Navigation | Update: No waypoints—regenerating full batch");
+            CreatePath(rearAxle);
         }
-        return false;
-    }
 
-    public bool HasReachedWaypoint(Vector3 position)
-    {
-
-        if (waypoints.Count > 0)
+        if (HasReachedWaypoint(rearAxle))
         {
-            float distanceToWP = Vector3.Distance(position, waypoints[0].transform.position);
-            if(distanceToWP < waypointReachThreshold)
-            {
-                RemoveFirstWaypoint();
-                return true;
-            }
+            //Debug.Log($"Navigation | Update: Waypoint reached, updating path...");
+
+            RemoveFirstWaypoint();
+
+            splineManager.RemoveSegment();
+
+            isScanning = true;
+
+            GenerateWaypoint();
+
+            isScanning = false;
+
+            splineManager.AddSegment(Waypoints);
         }
-        return false;
     }
 
-
-    public IEnumerator CreatePath(Vector3 rearAxle)
+    //Creates a path of waypointCount Waypoints
+    public void CreatePath(Vector3 rearAxle)
     {
         if (waypointPrefab == null)
         {
             Debug.LogError("WaypointManager | Start: waypointPrefab is not assigned!");
-            yield break;
+            return;
         }
 
         isScanning = true;
@@ -82,31 +93,26 @@ public class WaypointManager : MonoBehaviour
         lastScanDir = transform.forward;
 
         for (int i = 0; i < waypointCount; i++)
-            yield return StartCoroutine(GenerateWaypoint());
-
-
-        //re
-
+            GenerateWaypoint();
 
         isScanning = false;
-
-        //Regenerate Spline
 
         //Debug.Log($"WaypointManager | Start: Seeded: {waypointCount} waypoints!");
     }
 
-    public IEnumerator GenerateWaypoint()
+    //
+    public void GenerateWaypoint()
     {
-
         //Scan and find position for wp
         GetLanePosition(ArcScan());
 
         //Place wp
         CreateWaypoint(wpPos, wpRotation);
+        wpCounter++;
 
-        isScanning = false;
-        yield return null;
     }
+
+    //Scans in a Arc shape scanRadius whide, raycastDistance far made of rayCount vertical Raycasts which try to hit the road. If the first or last does not hit the scan whidens maxScanRadiusMultiplier times. and returns that as a List of Vector3 positions
     private List<Vector3> ArcScan()
     {
         float radius = scanRadius;
@@ -125,10 +131,10 @@ public class WaypointManager : MonoBehaviour
             {
                 Vector3 dir = Quaternion.AngleAxis(startAngle + i * angleStep, Vector3.up) * lastScanDir;
 
-                Vector3 origin = lastScanPos + dir.normalized * radius + Vector3.up * raycastHeight;
+                Vector3 origin = lastScanPos + dir.normalized * wpSpacing + Vector3.up * raycastHeight;
                 Debug.DrawRay(origin, Vector3.down * raycastDistance, Color.cyan, 1f);
-                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, raycastDistance)
-                    && hit.collider.CompareTag("Road"))
+
+                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, raycastDistance) && hit.collider.CompareTag("Road"))
                 {
                     roadHits.Add(hit.point);
                     if (i == 0) firstEdgeHit = true;
@@ -154,6 +160,7 @@ public class WaypointManager : MonoBehaviour
         return roadHits;
     }
 
+    //Find the right lane from Arc scan list
     private void GetLanePosition(List<Vector3> roadHits)
     {
 
@@ -195,6 +202,41 @@ public class WaypointManager : MonoBehaviour
         lastScanPos = wpPos;
         lastScanDir = (wpPos - prevPos).normalized;
     }
+
+    // Removes first item in Waypoints list
+    public bool RemoveFirstWaypoint()
+    {
+        if (waypoints.Count > 0)
+        {
+            Destroy(waypoints[0]);
+            waypoints.RemoveAt(0);
+
+            return true;
+        }
+        return false;
+    }
+
+    //Checks if the go Has Reached the next Waypoint in the list
+    public bool HasReachedWaypoint(Vector3 position)
+    {
+        if (waypoints.Count > 0)
+        {
+            float distanceToWP = Vector3.Distance(position, waypoints[2].transform.position);
+            if (distanceToWP < waypointReachThreshold)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //Instantiates a WP go and adds it to the list
+    public void CreateWaypoint(Vector3 position, Quaternion rotation)
+    {
+        GameObject wp = Instantiate(waypointPrefab, position, rotation);
+        waypoints.Add(wp);
+    }
+
     //Clears the hole list
     public void ClearWaypoints()
     {
