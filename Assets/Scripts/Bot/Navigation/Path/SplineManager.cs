@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -12,17 +13,17 @@ public class SplineManager : MonoBehaviour
     public float lookaheadGain = 0.5f;
     public float minLookAheadDistance = 3.7f;
     public float maxLookAheadDistance = 12f;
+    private Vector3 lastLookAhead;
 
     [Header("Spline Path Settings")]
-    public int subdivisionsPerSegment = 8;
-
     private List<Vector3> splinePoints = new List<Vector3>();
     public IReadOnlyList<Vector3> SplinePoints => splinePoints;
 
+    public int subdivisionsPerSegment = 8;
 
-    private Vector3 lastLookAhead;
-
+    //Other Data
     public Vector3 rearAxle;
+
 
     private void Start()
     {
@@ -34,6 +35,7 @@ public class SplineManager : MonoBehaviour
         splinePoints.Clear();
         List<Vector3> control = new List<Vector3> ();
 
+        if (waypointManager == null) return; 
         foreach (var wp in waypointManager.Waypoints)
         {
             control.Add(wp.transform.position);
@@ -149,11 +151,29 @@ public class SplineManager : MonoBehaviour
     }
     public Vector3 GetLookAheadPoint(Vector3 rearAxle, float vehicleSpeed)
     {
+
+        if (splinePoints == null || splinePoints.Count == 0)
+        {
+            Debug.LogWarning("SplineManager | GetLookAheadPoint: splinePoints is null or empty!");
+            return rearAxle; // or some safe fallback value
+        }
+
         float adjustedDistance = minLookAheadDistance + lookaheadGain * vehicleSpeed;
         adjustedDistance = Mathf.Clamp(adjustedDistance, minLookAheadDistance, maxLookAheadDistance);
 
         float accumulated = 0f;
-        Vector3 currentPoint = splinePoints[FindClosestSplinePoint(rearAxle)];
+
+        // Safty Check
+        int closestIndex = FindClosestSplinePoint(rearAxle);
+        if (closestIndex < 0 || closestIndex >= splinePoints.Count)
+        {
+            Debug.LogWarning("SplineManager | GetLookAheadPoint: closestIndex invalid!");
+            return rearAxle;
+        }
+        //
+        Vector3 currentPoint = splinePoints[closestIndex];
+
+
         for (int i = FindClosestSplinePoint(rearAxle); i < splinePoints.Count - 1; i++)
         {
             Vector3 nextPoint = splinePoints[i + 1];

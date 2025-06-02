@@ -1,7 +1,4 @@
-using TMPro;
 using UnityEngine;
-
-
 public class SimulationHandler : MonoBehaviour
 {
     [Header("Wheel Colliders")]
@@ -34,11 +31,6 @@ public class SimulationHandler : MonoBehaviour
 
     public float CURRENT_SPEED;
 
-    [Header("UI")]
-    public TextMeshProUGUI vehicleSpeedText;
-
-
-
     //Drive train type
     public enum DriveType
     {
@@ -47,12 +39,11 @@ public class SimulationHandler : MonoBehaviour
         AWD
     }
 
-
     private void FixedUpdate()
     {
         // Car speed & UI
         CURRENT_SPEED = Mathf.Round(carRigidbody.velocity.magnitude * 3.6f);
-        vehicleSpeedText.text = "Speed: " + CURRENT_SPEED.ToString("F1") + " km/h";
+        //vehicleSpeedText.text = "Speed: " + CURRENT_SPEED.ToString("F1") + " km/h";
 
 
         ApplySteering(steerInput);
@@ -135,7 +126,6 @@ public class SimulationHandler : MonoBehaviour
         //}
 
 
-
         // Distribute brake force between front and rear wheels
         float frontBrake = totalBrakeForce * 0.7f; 
         float rearBrake = totalBrakeForce * 0.3f;
@@ -146,8 +136,6 @@ public class SimulationHandler : MonoBehaviour
         rearLeftWheel.brakeTorque = rearBrake;
         rearRightWheel.brakeTorque = rearBrake;
     }
-
-
 
     private void ApplySteering(float angle)
     {
@@ -196,6 +184,11 @@ public class SimulationHandler : MonoBehaviour
         Debug.DrawRay(rearAxle, transform.forward * 5f, Color.green);
     }
 
+    public Vector3 GetRearAxlePosition()
+    {
+        return (rearLeftWheel.transform.position + rearRightWheel.transform.position) / 2f;
+    }
+
     private void OnDrawGizmos()
     {
         if (Mathf.Abs(steerInput) < 0.01f) return;
@@ -217,16 +210,4 @@ public class SimulationHandler : MonoBehaviour
         Gizmos.DrawSphere(centerOfRotation, 0.2f);
         Gizmos.DrawLine(rearAxleMid, centerOfRotation);
     }
-
-    public Vector3 GetRearAxlePosition()
-    {
-        return (rearLeftWheel.transform.position + rearRightWheel.transform.position) / 2f;
-    }
-
-    // Uncomment this if you want to use the old steering method
-    //private void ApplySteering(float angle)
-    //{
-    //    frontLeftWheel.steerAngle = angle;
-    //    frontRightWheel.steerAngle = angle;
-    //}
 }
