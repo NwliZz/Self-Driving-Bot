@@ -11,11 +11,18 @@ public class SimulationHandler : MonoBehaviour
     [SerializeField] private float topSpeed = 30f;            // km/h
     [SerializeField] private float maxMotorTorque = 1500f;
     [SerializeField] private float maxBrakeForce = 3000f;
-    [SerializeField] public float maxSteerAngle = 30f;
-    [SerializeField]private float trackWidth = 1.5f;
-    [SerializeField]private float wheelbase = 2.5f;
+    [SerializeField] public float maxSteerAngle = 35f;
+    [SerializeField] private float trackWidth = 1.5f;
+    [SerializeField] public float wheelbase = 2.5f;
 
-    [Header("Engine Braking")]
+    [Header("Car Parts State")]
+    [SerializeField] private float frontBrake;
+    [SerializeField] private float rearBrake;
+    [SerializeField] private float torque;
+    [SerializeField] private float steeringDegrees;
+
+
+   [Header("Engine Braking")]
     [Range(0f, 1f)] public float engineBrakingPercent = 0.09f; // 9% of max brake force
 
     [Header("Debug Info")]
@@ -79,7 +86,7 @@ public class SimulationHandler : MonoBehaviour
     {
         if (CURRENT_SPEED < topSpeed)
         {
-            float torque = throttle * maxMotorTorque;
+            torque = throttle * maxMotorTorque;
 
             switch (driveType)
             {
@@ -127,8 +134,8 @@ public class SimulationHandler : MonoBehaviour
 
 
         // Distribute brake force between front and rear wheels
-        float frontBrake = totalBrakeForce * 0.7f; 
-        float rearBrake = totalBrakeForce * 0.3f;
+        frontBrake = totalBrakeForce * 0.7f; 
+        rearBrake = totalBrakeForce * 0.3f;
 
         frontLeftWheel.brakeTorque = frontBrake;
         frontRightWheel.brakeTorque = frontBrake;
@@ -163,6 +170,8 @@ public class SimulationHandler : MonoBehaviour
         // 5) Compute individual wheel angles
         float innerAngleRad = Mathf.Atan(wheelbase / (turningRadius - halfTrack));
         float outerAngleRad = Mathf.Atan(wheelbase / (turningRadius + halfTrack));
+
+        steeringDegrees = Mathf.Atan(wheelbase / turningRadius);
 
         float innerDeg = Mathf.Rad2Deg * innerAngleRad;
         float outerDeg = Mathf.Rad2Deg * outerAngleRad;

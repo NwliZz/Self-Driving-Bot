@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -18,25 +17,19 @@ public class SplineManager : MonoBehaviour
     [Header("Spline Path Settings")]
     private List<Vector3> splinePoints = new List<Vector3>();
     public IReadOnlyList<Vector3> SplinePoints => splinePoints;
-
     public int subdivisionsPerSegment = 8;
-
-    //Other Data
-    public Vector3 rearAxle;
-
 
     private void Start()
     {
         waypointManager = GetComponent<WaypointManager>();
     }
 
-    public void GenerateSplinePath()
+    public void GenerateSplinePath(IReadOnlyList<GameObject> Waypoints)
     {
         splinePoints.Clear();
         List<Vector3> control = new List<Vector3> ();
 
-        if (waypointManager == null) return; 
-        foreach (var wp in waypointManager.Waypoints)
+        foreach (var wp in Waypoints)
         {
             control.Add(wp.transform.position);
         }
@@ -62,7 +55,7 @@ public class SplineManager : MonoBehaviour
 
     public bool HasReachedCurrentSegment(Vector3 rearAxle)
     {
-        float distToPoint = Vector3.Distance(rearAxle, splinePoints[subdivisionsPerSegment*2]);
+        float distToPoint = Vector3.Distance(rearAxle, SplinePoints[subdivisionsPerSegment*2]);
 
         if (distToPoint < 5f)
         {
@@ -74,7 +67,7 @@ public class SplineManager : MonoBehaviour
 
     public void RemoveSegment()
     {
-        if (splinePoints.Count > subdivisionsPerSegment + 1)
+        if (SplinePoints.Count > subdivisionsPerSegment + 1)
         {
             splinePoints.RemoveRange(0, subdivisionsPerSegment + 1);
         }
@@ -84,7 +77,7 @@ public class SplineManager : MonoBehaviour
     public void AddSegment(IReadOnlyList<GameObject> Waypoints)
     {
 
-        if (waypointManager.Waypoints.Count < 4 || splinePoints.Count < 1)
+        if (waypointManager.Waypoints.Count < 4 || SplinePoints.Count < 1)
         {
             Debug.LogWarning("SplineManager | Not enough control or spline points to add segment.");
             return;
@@ -92,7 +85,7 @@ public class SplineManager : MonoBehaviour
 
         int n = Waypoints.Count;
 
-        Vector3 p0 = splinePoints[splinePoints.Count-1];
+        Vector3 p0 = SplinePoints[SplinePoints.Count-1];
         Vector3 p1 = waypointManager.Waypoints[n - 3].transform.position;
         Vector3 p2 = waypointManager.Waypoints[n - 2].transform.position;
         Vector3 p3 = waypointManager.Waypoints[n - 1].transform.position;
@@ -152,7 +145,7 @@ public class SplineManager : MonoBehaviour
     public Vector3 GetLookAheadPoint(Vector3 rearAxle, float vehicleSpeed)
     {
 
-        if (splinePoints == null || splinePoints.Count == 0)
+        if (SplinePoints == null || SplinePoints.Count == 0)
         {
             Debug.LogWarning("SplineManager | GetLookAheadPoint: splinePoints is null or empty!");
             return rearAxle; // or some safe fallback value
@@ -165,18 +158,18 @@ public class SplineManager : MonoBehaviour
 
         // Safty Check
         int closestIndex = FindClosestSplinePoint(rearAxle);
-        if (closestIndex < 0 || closestIndex >= splinePoints.Count)
+        if (closestIndex < 0 || closestIndex >= SplinePoints.Count)
         {
             Debug.LogWarning("SplineManager | GetLookAheadPoint: closestIndex invalid!");
             return rearAxle;
         }
         //
-        Vector3 currentPoint = splinePoints[closestIndex];
+        Vector3 currentPoint = SplinePoints[closestIndex];
 
 
-        for (int i = FindClosestSplinePoint(rearAxle); i < splinePoints.Count - 1; i++)
+        for (int i = FindClosestSplinePoint(rearAxle); i < SplinePoints.Count - 1; i++)
         {
-            Vector3 nextPoint = splinePoints[i + 1];
+            Vector3 nextPoint = SplinePoints[i + 1];
             accumulated += Vector3.Distance(currentPoint, nextPoint);
 
             if (accumulated >= adjustedDistance)
@@ -187,24 +180,24 @@ public class SplineManager : MonoBehaviour
             currentPoint = nextPoint;
         }
 
-        return splinePoints[splinePoints.Count - 1];
+        return SplinePoints[SplinePoints.Count - 1];
     }
 
     private void OnDrawGizmos()
     {
-        if (splinePoints == null || splinePoints.Count < 2)
+        if (SplinePoints == null || SplinePoints.Count < 2)
             return;
 
         // Draw the spline segments
         Gizmos.color = Color.yellow;
-        for (int i = 0; i < splinePoints.Count - 1; i++)
+        for (int i = 0; i < SplinePoints.Count - 1; i++)
         {
-            Gizmos.DrawLine(splinePoints[i], splinePoints[i + 1]);
+            Gizmos.DrawLine(SplinePoints[i], SplinePoints[i + 1]);
         }
 
         // Draw a small sphere at each sample point
         Gizmos.color = Color.red;
-        foreach (var pt in splinePoints)
+        foreach (var pt in SplinePoints)
         {
             Gizmos.DrawSphere(pt, 0.1f);
         }

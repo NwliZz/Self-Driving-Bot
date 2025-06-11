@@ -9,9 +9,12 @@ public class CarMono : MonoBehaviour
     [SerializeField]private Vector3 velocity;
     [SerializeField]private Vector3 heading;
 
+    private SimulationHandler simulationHandler;
+
     void Start()
     {
         worldModel = FindObjectOfType<WorldModel>();
+        simulationHandler = GetComponent<SimulationHandler>();
         self = new Car
         {
             Name = gameObject.name,
@@ -19,23 +22,22 @@ public class CarMono : MonoBehaviour
             IsDynamic = true,
             Radius = radius,
             Direction = transform.forward,
-            Velocity = Vector3.zero
-            
+            Velocity = (transform.position - lastPosition) / Time.deltaTime
+
         };
         worldModel.Cars.Add(self);
+
+        lastPosition = transform.position;
     }
 
-    void Update()
+    void FixedUpdate()
     {
         // Update position, velocity, heading
-        Vector3 currentPosition = transform.position;
-        velocity = (currentPosition - lastPosition) / Time.deltaTime;
-        heading = transform.forward;
 
-        self.Position = currentPosition;
-        self.Velocity = velocity;
-        self.Direction = heading;
+        self.Position = transform.position;
+        self.Velocity = (transform.position - lastPosition) / Time.deltaTime;
+        self.Direction = transform.forward;
 
-        lastPosition = currentPosition;
+        lastPosition = transform.position;
     }
 }

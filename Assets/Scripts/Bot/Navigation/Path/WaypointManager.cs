@@ -5,37 +5,40 @@ public class WaypointManager : MonoBehaviour
 {
     private List<GameObject> waypoints = new List<GameObject>();
     public IReadOnlyList<GameObject> Waypoints => waypoints;
-
-
-    [Header("Scanning Settings")]
+    [Header("General Settings")]
     public bool DEBUG;
 
     [Header("Scanning Settings")]
+    public float debugRayDuration = 1.0f;
+
     //Scacing to each wp
     public float wpSpacing = 3f;
-
     public float scanRadius = 7f;
-    private float raycastDistance = 10f;
-    private float raycastHeight = 5f;
-    private float maxScanRadiusMultiplier = 2f;
+
+    private readonly float raycastDistance = 10f;
+    private readonly float raycastHeight = 5f;
+    private readonly float maxScanRadiusMultiplier = 2f;
 
     //Rays of the scan
-    private int rayCount = 31;
+    private readonly int rayCount = 31;
 
     // True if performing an ArcScan
     [HideInInspector] public bool isScanning = false;
-    
-    //Lane boundries
-    Vector3 leftMost, rightMost;
 
 
+    [Header("Waypoint Instantiation Settings")]
 
-    [Header("Waypoint PlaceMent Settings")]
+    //The waypoint wich is consindered the target of the Waypoints list.(It will start removing from the 3rd wp of the list)
+    public readonly int targetWaypointIdx = 2;
+
     //How many wps will be in waypoint sliding window
     public int waypointCount = 5;
 
     //- for right, + for left
     public float laneOffset;
+
+    //Lane boundries
+    Vector3 leftMost, rightMost;
 
     //Data for the current placment of the wp
     private Vector3 wpPos;
@@ -45,28 +48,33 @@ public class WaypointManager : MonoBehaviour
     private Vector3 lastScanPos;
     private Vector3 lastScanDir;
 
+    private Vector3 rearAxle;
 
     ////WP Arival 
     public float waypointReachThreshold = 1.8f;
-    private bool firstWPreached = true;
-    public int wpCounter;
-    public Vector3 rearAxle;
+
 
 
     //Refrences
     private SplineManager splineManager;
+    private SimulationHandler simulationHandler;
     public GameObject waypointPrefab;
+
 
     private void Start()
     {
+        simulationHandler = GetComponent<SimulationHandler>();
         splineManager = GetComponent<SplineManager>();
+        rearAxle = simulationHandler.GetRearAxlePosition();
         
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
+        rearAxle = simulationHandler.GetRearAxlePosition();
+
         //Not Likely
-        if (Waypoints.Count == 0)
+        if (waypoints.Count == 0)
         {
             Debug.Log("Navigation | Update: No waypoints—regenerating full batch");
             CreatePath(rearAxle);
@@ -81,14 +89,17 @@ public class WaypointManager : MonoBehaviour
     //Creates a path of waypointCount Waypoints
     public void CreatePath(Vector3 rearAxle)
     {
+        isScanning = true;
+
+        //Don't like it, nothing i could do...
+        splineManager = GetComponent<SplineManager>();
+
         if (DEBUG) Debug.Log("Creating Path of :" + waypointCount + " Waypoints...");
-        if (waypointPrefab == null)
+        if (waypointPrefab == null )
         {
             Debug.LogError("WaypointManager | Start: waypointPrefab is not assigned!");
             return;
         }
-
-        isScanning = true;
 
         //Initial scan orogin
         lastScanPos = rearAxle;
@@ -96,6 +107,8 @@ public class WaypointManager : MonoBehaviour
 
         for (int i = 0; i < waypointCount; i++)
             AddWaypoint();
+
+        splineManager.GenerateSplinePath(Waypoints);
 
         isScanning = false;
 
@@ -106,17 +119,17 @@ public class WaypointManager : MonoBehaviour
     {
         if (DEBUG) Debug.Log($"Navigation | UpdatePath: Updating path...");
 
-        RemoveFirstWaypoint();
+        isScanning = true;
 
         splineManager.RemoveSegment();
 
-        isScanning = true;
+        RemoveFirstWaypoint();
 
         AddWaypoint();
 
-        isScanning = false;
-
         splineManager.AddSegment(Waypoints);
+
+        isScanning = false;
     }
 
     //Starts the proces of creating a waypoint
@@ -127,11 +140,8 @@ public class WaypointManager : MonoBehaviour
 
         //Place wp
         CreateAndSaveWaypoint(wpPos, wpRotation);
-        wpCounter++;
-
     }
 
-    //Scans in a Arc shape scanRadius whide, raycastDistance far made of rayCount vertical Raycasts which try to hit the road. If the first or last does not hit the scan whidens maxScanRadiusMultiplier times. and returns that as a List of Vector3 positions
     private List<Vector3> ArcScan()
     {
         float radius = scanRadius;
@@ -152,7 +162,7 @@ public class WaypointManager : MonoBehaviour
 
                 Vector3 origin = lastScanPos + dir.normalized * wpSpacing + Vector3.up * raycastHeight;
 
-                Debug.DrawRay(origin, Vector3.down * raycastDistance, Color.cyan, 0.1f);
+                if(DEBUG) Debug.DrawRay(origin, Vector3.down * raycastDistance, Color.cyan, 0.1f);
 
                 if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, raycastDistance) && hit.collider.CompareTag("Road"))
                 {
@@ -242,8 +252,8 @@ public class WaypointManager : MonoBehaviour
     {
         if (waypoints.Count > 0)
         {
-            float distanceToWP = Vector3.Distance(position, waypoints[2].transform.position);
-            if (distanceToWP < waypointReachThreshold)
+            float distanceToWP = Vector3.Distance(position, waypoints[targetWaypointIdx].transform.position);
+            if (distanceToWP <= waypointReachThreshold)
             {
                 return true;
             }

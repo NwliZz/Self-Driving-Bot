@@ -22,41 +22,28 @@ public class Navigation : MonoBehaviour
 
     private void Start()
     {
-        if (waypointManager.waypointPrefab == null)
+        if (waypointManager == null || simHandler == null || splineManager == null)
         {
             Debug.LogError($"{gameObject.name} | waypointPrefab IS NOT ASSIGNED!");
             return;
         }
+
         rearAxle = simHandler.GetRearAxlePosition();
 
-        //Create a start path of waypoints
         waypointManager.CreatePath(rearAxle);
-
-        //Build a spline path on top of the waypoints
-        splineManager.GenerateSplinePath();
     }
 
     private void Update()
     {
-        //In case the spline path did not created
-        if(splineManager.SplinePoints.Count < 4)
-        {
-            splineManager.GenerateSplinePath();
-        }
-
         rearAxle = simHandler.GetRearAxlePosition();
-
-        //Update the re rear position
-        waypointManager.rearAxle = rearAxle;
-        splineManager.rearAxle = rearAxle;
 
         if (waypointManager.isScanning) return;
 
         if (waypointManager.Waypoints.Count > 2 && DEBUG)
         {
-            //TargetWayoint
-            Debug.DrawLine(rearAxle, waypointManager.Waypoints[2].transform.position, Color.magenta);
-            Debug.Log($"Navigation | Distance to Waypoint = {Vector3.Distance(rearAxle, waypointManager.Waypoints[1].transform.position):F2}");
+            //TargetWaypoint
+            Debug.DrawLine(rearAxle, waypointManager.Waypoints[waypointManager.targetWaypointIdx].transform.position, Color.magenta);
+            Debug.Log($"Navigation | Distance to Waypoint = {Vector3.Distance(rearAxle, waypointManager.Waypoints[waypointManager.targetWaypointIdx].transform.position):F2}");
         }
     }
 

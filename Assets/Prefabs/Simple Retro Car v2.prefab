@@ -814,13 +814,14 @@ GameObject:
   m_Component:
   - component: {fileID: 4909473998114934636}
   - component: {fileID: 4563684384569420838}
-  - component: {fileID: 8831343211514812622}
   - component: {fileID: 6094356722431885325}
+  - component: {fileID: 8831343211514812622}
   - component: {fileID: 7685390114519159107}
   - component: {fileID: 1817158913985612426}
   - component: {fileID: 7882091086348713650}
+  - component: {fileID: 7713290334540076587}
+  - component: {fileID: 5520644652198593653}
   - component: {fileID: 7664568074125738531}
-  - component: {fileID: 3994039672719616470}
   m_Layer: 3
   m_Name: Simple Retro Car v2
   m_TagString: Car
@@ -863,7 +864,7 @@ Rigidbody:
   m_GameObject: {fileID: 6396113410456973215}
   serializedVersion: 4
   m_Mass: 1500
-  m_Drag: 0
+  m_Drag: 0.15
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
@@ -880,7 +881,28 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 2
+--- !u!114 &6094356722431885325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6396113410456973215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b5c42f446559a84ab7b876bf9b65d50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DEBUG: 0
+  debugRayDuration: 1
+  wpSpacing: 5
+  scanRadius: 10
+  isScanning: 0
+  waypointCount: 10
+  laneOffset: 0.3
+  waypointReachThreshold: 3
+  waypointPrefab: {fileID: 9211623312101313145, guid: 9480cfd02355d28489b1c924b77a0d93, type: 3}
 --- !u!114 &8831343211514812622
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -896,28 +918,6 @@ MonoBehaviour:
   waypointManager: {fileID: 0}
   splineManager: {fileID: 0}
   DEBUG: 0
---- !u!114 &6094356722431885325
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6396113410456973215}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b5c42f446559a84ab7b876bf9b65d50, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  DEBUG: 0
-  wpSpacing: 5
-  scanRadius: 10
-  isScanning: 0
-  waypointCount: 10
-  laneOffset: 0.3
-  waypointReachThreshold: 3
-  wpCounter: 0
-  rearAxle: {x: 0, y: 0, z: 0}
-  waypointPrefab: {fileID: 9211623312101313145, guid: 9480cfd02355d28489b1c924b77a0d93, type: 3}
 --- !u!114 &7685390114519159107
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -935,7 +935,6 @@ MonoBehaviour:
   minLookAheadDistance: 3
   maxLookAheadDistance: 12
   subdivisionsPerSegment: 30
-  rearAxle: {x: 0, y: 0, z: 0}
 --- !u!114 &1817158913985612426
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -948,16 +947,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dde1e438876f7a4ca1acf32625a4890, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  desiredSpeed: 20
-  minSpeedMultiplier: 0.5
-  maxSpeedMultiplier: 2.5
-  stopDistanceHysteresis: 7
-  maxDetectDistance: 20
-  maxAccel: 2
-  maxBreaking: 3.5
-  reactionTime: 0.7
-  lateralStandstillGap: 2
-  detectionBuffer: 5
 --- !u!114 &7882091086348713650
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -973,6 +962,48 @@ MonoBehaviour:
   radius: 2.5
   velocity: {x: 0, y: 0, z: 0}
   heading: {x: 0, y: 0, z: 0}
+--- !u!114 &7713290334540076587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6396113410456973215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a485021724600054798c2e6b33a0cf8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stopDistanceHysteresis: 4.18
+  maxDetectDistance: 10
+  maxAcceleration: 2
+  maxBreaking: 2.9
+  desiredSpeed: 34.1
+  minSpeedMultiplier: 0.5
+  maxSpeedMultiplier: 1
+  lookaheadGain: 0.5
+  minLookAheadDistance: 3.7
+  maxLookAheadDistance: 12
+  curvatureThreshold: 0.94
+  motorPropGain: 1
+  motorIntegralGain: 0.3
+  motorDerivativeGain: 0.15
+  steeringSmoothness: 0.8
+  DEBUG: 1
+  rearAxle: {x: 0, y: 0, z: 0}
+  detectionDistanceLength: 0
+--- !u!114 &5520644652198593653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6396113410456973215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fb7a479533aa0944874f503bf731347, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &7664568074125738531
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -991,26 +1022,18 @@ MonoBehaviour:
   rearRightWheel: {fileID: 8949347999871881435}
   topSpeed: 59.4
   maxMotorTorque: 2000
-  maxBrakeForce: 3000
+  maxBrakeForce: 4000
   maxSteerAngle: 40
   trackWidth: 1.7
   wheelbase: 2.5
+  frontBrake: 0
+  rearBrake: 0
+  torque: 0
+  steeringDegrees: 0
   engineBrakingPercent: 0.09
   carRigidbody: {fileID: 4563684384569420838}
-  driveType: 0
+  driveType: 2
   CURRENT_SPEED: 0
---- !u!114 &3994039672719616470
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6396113410456973215}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e8f60a5db9ff1d43bdeb01c664184c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &8542228320618249878
 GameObject:
   m_ObjectHideFlags: 0
