@@ -26,7 +26,7 @@ public class Actions : MonoBehaviour
     private Vector3 lookAheadPoint;
 
     //Turn aknowlagment curvature threshold
-    public float curvatureThreshold = 3;
+    public float curvatureThreshold;
 
     //PID waights
     public float motorPropGain = 2f, motorIntegralGain = 0.3f, motorDerivativeGain = 0.15f;
@@ -189,12 +189,12 @@ public class Actions : MonoBehaviour
         float angleToLookahead = Vector3.SignedAngle(transform.forward, toLookahead, Vector3.up) * Mathf.Deg2Rad;
         float L = simHandler.wheelbase;
 
-        float newSteeringAngle = Mathf.Atan2(2 * L * Mathf.Sin(angleToLookahead), ld) * Mathf.Rad2Deg;
-        newSteeringAngle = Mathf.Clamp(newSteeringAngle, -simHandler.maxSteerAngle, simHandler.maxSteerAngle);
+        //float newSteeringAngle = Mathf.Atan2(2 * L * Mathf.Sin(angleToLookahead), ld) * Mathf.Rad2Deg;
+        //newSteeringAngle = Mathf.Clamp(newSteeringAngle, -simHandler.maxSteerAngle, simHandler.maxSteerAngle);
 
-        // Lowpass filter the steering
-        float steeringAngle = steeringSmoothness * lastSteeringAngle + (1 - steeringSmoothness) * newSteeringAngle;
-        lastSteeringAngle = steeringAngle;
+        //// Lowpass filter the steering
+        //float steeringAngle = steeringSmoothness * lastSteeringAngle + (1 - steeringSmoothness) * newSteeringAngle;
+        //lastSteeringAngle = steeringAngle;
 
         // Adaptive speed on curve
         float distanceToLookAhead = Vector3.Distance(rearAxle, lookAheadPoint);
@@ -205,6 +205,11 @@ public class Actions : MonoBehaviour
         float timeToReach = distanceToLookAhead / approachSpeed;
 
         float curvature = splineManager.CalculateCurvature(clostestSplinePointIndx);
+
+        float curvatureSensitivity = Mathf.Lerp(1.0f, 2.0f, Mathf.Clamp01(curvature / curvatureThreshold));
+
+        float newSteeringAngle = curvatureSensitivity * Mathf.Atan2(2 * L * Mathf.Sin(angleToLookahead), ld) * Mathf.Rad2Deg;
+
         float normalizedCurvature = Mathf.Clamp01(1f - curvature / curvatureThreshold);
         float curveSpeed = desiredSpeed * Mathf.Lerp(minSpeedMultiplier, maxSpeedMultiplier, normalizedCurvature);
 
@@ -222,7 +227,7 @@ public class Actions : MonoBehaviour
         {
             ThrottlePercent = throttlePercent,
             BrakePercent = brakePercent,
-            SteeringAngle = steeringAngle,
+            SteeringAngle = newSteeringAngle,
             Priority = 30
         };
     }

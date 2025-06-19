@@ -974,21 +974,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a485021724600054798c2e6b33a0cf8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stopDistanceHysteresis: 4.18
+  stopDistanceHysteresis: 1
   maxDetectDistance: 10
   maxAcceleration: 2
   maxBreaking: 2.9
-  desiredSpeed: 34.1
-  minSpeedMultiplier: 0.5
-  maxSpeedMultiplier: 1
-  lookaheadGain: 0.5
-  minLookAheadDistance: 3.7
-  maxLookAheadDistance: 12
-  curvatureThreshold: 0.94
+  desiredSpeed: 55
+  minSpeedMultiplier: 0.2
+  maxSpeedMultiplier: 2
+  lookaheadGain: 0.4
+  minLookAheadDistance: 3
+  maxLookAheadDistance: 13
+  curvatureThreshold: 0.45
   motorPropGain: 1
-  motorIntegralGain: 0.3
-  motorDerivativeGain: 0.15
-  steeringSmoothness: 0.8
+  motorIntegralGain: 0.7
+  motorDerivativeGain: 0.3
+  steeringSmoothness: 0.1
   DEBUG: 1
   rearAxle: {x: 0, y: 0, z: 0}
   detectionDistanceLength: 0
