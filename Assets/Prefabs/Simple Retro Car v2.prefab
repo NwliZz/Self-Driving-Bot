@@ -983,7 +983,7 @@ MonoBehaviour:
   maxSpeedMultiplier: 2
   lookaheadGain: 0.4
   minLookAheadDistance: 3
-  maxLookAheadDistance: 13
+  maxLookAheadDistance: 9
   curvatureThreshold: 0.45
   motorPropGain: 1
   motorIntegralGain: 0.7

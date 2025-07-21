@@ -183,7 +183,7 @@ public class SplineManager : MonoBehaviour
         return SplinePoints[SplinePoints.Count - 1];
     }
 
-    private void OnDrawGizmos()
+    private void OnDrawGizmosSelected()
     {
         if (SplinePoints == null || SplinePoints.Count < 2)
             return;

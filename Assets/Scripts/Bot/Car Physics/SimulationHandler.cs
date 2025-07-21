@@ -198,7 +198,7 @@ public class SimulationHandler : MonoBehaviour
         return (rearLeftWheel.transform.position + rearRightWheel.transform.position) / 2f;
     }
 
-    private void OnDrawGizmos()
+    private void OnDrawGizmosSelected()
     {
         if (Mathf.Abs(steerInput) < 0.01f) return;
 
