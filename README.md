@@ -1,182 +1,197 @@
-Self-Driving Bot (SDB) — Automated Driving System for Open-World Games (Unity)
+# Self-Driving Bot (SDB)
 
-Self-Driving Bot (SDB) is a Unity-based Automated Driving System (ADS) designed to drive safely and efficiently in open-world style road scenarios (two-way roads, no intersections), bridging the gap between simple scripted traffic AI and more advanced driving agents.
+**Automated Driving System for Open-World Roads (Unity)**
 
-Demo
+Self-Driving Bot (SDB) is a Unity-based Automated Driving System (ADS) prototype built for open-world, two-way road driving (no intersections). It bridges the gap between basic waypoint traffic AI and more structured ADS-style pipelines: perception -> planning -> behavior -> control.
 
-Media/demo.gif (recommended: add a 10–20s GIF of the bot driving + stopping at a red light)
+It procedurally builds a lane path from road scanning, follows it with Pure Pursuit steering, regulates speed with PID, and adds safety behaviors for traffic lights and front-car following (IDM-style) using a lightweight priority arbitration layer.
 
-Videos used in the thesis (copy/paste):
+---
 
-SDB run: https://youtu.be/r0TC5QLBo5A
-BeamNG ADS run: https://youtu.be/AmPZhkvouV4
+## Demo
 
-What this project does
+- SDB run (YouTube): https://youtu.be/r0TC5QLBo5A
+- BeamNG ADS run (YouTube): https://youtu.be/AmPZhkvouV4
 
-Builds a drivable lane path procedurally from road scanning and continuously updates it ahead of the vehicle.
+Recommended: add a short GIF here (10–20s)
+Media/demo.gif
 
-Generates a smooth path using Catmull-Rom splines and follows it with Pure Pursuit steering.
+---
 
-Plans speed proactively using curvature look-ahead and applies throttle/brake with a PID controller.
+## What this project does
 
-Handles traffic lights and front-car following (IDM-based) with dynamic priority arbitration between behaviors.
+- Perceives the road using arc raycast scanning against Road colliders (tag-based).
+- Builds a rolling waypoint window ahead of the ego vehicle (sliding refresh).
+- Generates a smooth path with Catmull-Rom splines.
+- Follows the path using Pure Pursuit steering.
+- Plans speed using curvature look-ahead and applies throttle/brake via PID speed control.
+- Adds safety behaviors:
+- - Front-car following via an IDM-style acceleration model
+- - Traffic light stopping (red/yellow) with 'stop before the object' behavior
+- Arbitrates behaviors with a unified ControlCommand and priority selection.
 
-Key features
-Perception
+## Key design note (important)
+**Steering always comes from the path follower.** 
 
-Road detection via raycast arc scanning to estimate road edges and lane placement.
+Safety behaviors (traffic lights / front car) primarily affect throttle and braking. The final command’s SteeringAngle is overwritten by the path follower’s steering every physics step.
 
-A lightweight World Model approach for tracking objects (cars, obstacles, traffic lights) in the scene.
+This is intentional: lateral stability stays consistent while longitudinal behaviors override speed safely.
 
-Planning
-
-Waypoint sliding window ahead of the ego vehicle (continuous path refresh).
-
-Spline path generation (Catmull-Rom) with configurable subdivisions per segment.
-
-Prediction & Behavior
-
-Front-car handling (IDM) for safe longitudinal following.
-
-Traffic light handling with reliable “stop-before-line” behavior.
-
-Control & Arbitration
-
-Behaviors output a unified ControlCommand (throttle, brake, steering, priority).
-
-A central Driver selects the highest-priority command each frame and resets controllers on priority changes to reduce control carry-over between modes.
-
-System architecture
+System architecture (high-level)
 flowchart LR
-  Road[Road collider/tagged "Road"] --> Scan[WaypointManager / Scan\nArc raycast scan]
-  Scan --> WPs[Waypoints\n(sliding window)]
-  WPs --> Spline[SplineManager\nCatmull-Rom spline]
-  Spline --> Actions[Actions\nEvaluatePath / EvaluateTrafficLight / GetCar]
-  World[WorldModel\nCars/Obstacles/Lights] --> Track[TrackingManager\nobjects in front]
+  Road[Road collider tagged "Road"] --> Scan[WaypointManager / Arc raycasts]
+  Scan --> WPs[Waypoints / (sliding window)]
+  WPs --> Spline[SplineManager / Catmull-Rom spline samples]
+  Spline --> Actions[Actions / EvaluatePath / EvaluateTrafficLight / GetCar]
+  WM[WorldModel/Cars/Lights/Obstacles] --> Track[TrackingManager / closest object ahead]
   Track --> Actions
-  Actions --> Cmd[ControlCommand\n(throttle, brake, steer, priority)]
-  Cmd --> Driver[Driver\npriority arbitration]
-  Driver --> Sim[SimulationHandler\nWheelColliders physics]
+  Actions --> Cmd[ControlCommand / (throttle, brake, steer, priority)]
+  Cmd --> Driver[Driver / priority selection]
+  Driver --> Sim[SimulationHandler / WheelCollider actuation]
 
-How it works (high level)
-1) Road → Waypoints
+## How it works
+1) Road scanning -> Waypoints (WaypointManager)
 
-The bot scans the road surface with downward raycasts arranged in an arc. From the detected road hits, it estimates left/right edges and places waypoints on the target lane. Waypoints are refreshed continuously as the vehicle advances (sliding window).
+The ego vehicle "looks" ahead using a fan/arc of downward raycasts against colliders tagged Road. From the hits, it estimates left/right road edges, infers a lane center, and spawns a waypoint at a fixed spacing.
 
-2) Waypoints → Spline Path
+A small rolling window of waypoints is maintained:
+- when the vehicle reaches the target waypoint, the first waypoint is removed
+- a new waypoint is scanned and appended
+- the spline is updated incrementally
 
-Waypoints become control points for a Catmull-Rom spline, producing a dense SplinePath suitable for smooth tracking and curvature measurement.
+2) Waypoints -> Spline path (SplineManager)
 
-3) Path following
+Waypoints are converted into a dense sample path using Catmull-Rom interpolation with configurable subdivisionsPerSegment. This provides:
+- a smooth tracking path
+- curvature estimation (used for speed adaptation)
+- nearest spline point lookup
 
-Steering: Pure Pursuit selects a dynamic look-ahead point on the spline and computes steering toward it.
+3) Path following + speed planning (Actions)
 
-Speed planning: A curvature look-ahead reduces target speed for sharper curves.
+- Steering (Pure Pursuit): selects a look-ahead point on the spline based on speed and computes a steering angle (degrees).
+- Speed planning: reduces target speed as curvature increases (curve look-ahead).
+- Speed control: a PID controller produces throttle/brake output based on the target speed vs current speed.
 
-Speed control: A PID controller translates speed error into throttle/brake.
+4) Safety behaviors + priority arbitration (Driver + Actions)
 
-4) Safety behaviors + dynamic priority
+Traffic light and front-car behaviors are evaluated in parallel and return ControlCommands with priorities. The Driver picks the highest priority command each physics step.
 
-Traffic lights and front vehicles are evaluated in parallel. Each behavior returns a ControlCommand with a priority. The Driver applies the command with the highest priority (e.g., urgent braking overrides path cruising).
+When priority changes, PID state is reset to reduce "carry over" between modes.
 
-Getting started
-Requirements
+## Getting started
 
-Unity version: TODO (fill in your Unity Editor version)
+### Requirements
 
-Platform tested: TODO (Windows / macOS / Linux)
+1) Unity: Check ProjectSettings/ProjectVersion.txt for the exact editor version used.
+2) Physics: WheelCollider-based vehicle setup (included in SimulationHandler)
+3) Input: None required (fully autonomous)
 
-Input: SDB drives autonomously (no player input required)
+## Quickstart (clone → play)
 
-Setup
+1) Open the project in Unity.
+2) Open the demo scene (recommended to include one, e.g. Assets/Scenes/Demo.unity).
+3) Ensure your drivable road colliders are tagged: Road
+4) Place the SDB vehicle prefab in the scene.
+5) Ensure there is exactly one WorldModel in the scene.
+6) Press Play.
 
-Open the project in Unity.
+## Scene setup checklist
 
-Ensure your drivable road meshes/colliders are tagged as: Road.
+### A) The ego vehicle (same GameObject)
 
-Place the SDB vehicle prefab in the scene (or create one and add the required components below).
+Add/confirm these components:
+- SimulationHandler (WheelCollider actuation + Ackermann steering)
+- WaypointManager (road scan + rolling waypoint window)
+- SplineManager (Catmull-Rom spline + curvature)
+- Actions (path following + traffic/car behaviors + PID)
+- TrackingManager (selects closest relevant object ahead from WorldModel)
+- Driver (priority selection + applies final command)
 
-Press Play.
+Also required:
+- a Rigidbody assigned to SimulationHandler.carRigidbody
+- WheelColliders assigned in SimulationHandler (front/rear, left/right)
+- a waypoint prefab assigned in WaypointManager.waypointPrefab
 
-Required components (typical)
+### B) World model (one per scene)
 
-On the SDB vehicle (or relevant scene objects), you should have:
+Add a WorldModel object somewhere in the scene.
 
-Driver
+### C) Detectable objects (must register into WorldModel)
 
-Actions
+To be "seen" by the ADS, objects must have the registration scripts:
 
-TrackingManager
+- Vehicles: CarMono
+- Traffic lights: TrafficLightMono
+- Static obstacles: ObstacleMono
 
-WaypointManager
+Note: WorldModel.Update() is currently a placeholder. Registration happens via these *Mono scripts at runtime.
 
-SplineManager
+## Configuration (Inspector highlights)
 
-SimulationHandler (WheelCollider-based)
+## Path following & speed
+- Actions.desiredSpeed — cruise speed target (see Units note below)
+- Actions.minLookAheadDistance / maxLookAheadDistance — steering stability vs responsiveness
+- Actions.lookaheadGain — increases look-ahead with speed
+- Actions.curvatureThreshold — curve sensitivity threshold
+- Actions.motorPropGain / motorIntegralGain / motorDerivativeGain — PID tuning
 
-Plus a scene-level:
+### Scanning & path density
 
-WorldModel (registers/maintains detectable objects)
+- WaypointManager.wpSpacing — waypoint spacing (meters)
+- WaypointManager.waypointCount — size of rolling window
+- WaypointManager.waypointReachThreshold — refresh trigger distance
+- SplineManager.subdivisionsPerSegment — spline smoothness vs cost
 
-Project structure (important scripts)
-Script	Role
-Driver.cs	Main orchestrator: collects candidate commands, picks highest priority, applies to vehicle control
-Actions.cs	Core behaviors: path following, traffic light handling, front-car handling, look-ahead selection
-WaypointManager.cs / Scan.cs	Procedural road scanning + waypoint placement + sliding window refresh
-SplineManager.cs	Catmull-Rom spline generation, curvature estimation, spline visualization
-TrackingManager.cs	Queries “relevant objects in front” from the world model
-WorldModel.cs	Central state store for cars/obstacles/traffic lights (game-friendly “network-dependent” ADS approach)
-SimulationHandler.cs	Low-level actuation: throttle/brake/steer → WheelCollider physics
-CntrlCmnd.cs	ControlCommand struct (throttle, brake, steering, priority)
-Configuration (Inspector highlights)
-Driving feel
+### Behavior arbitration
 
-Actions.desiredSpeed: cruising speed target
+- Path command uses a baseline priority (cruise).
+- Traffic lights and front-car behavior compute a dynamic priority based on urgency (gap + required deceleration).
+- Driver selects the max priority each physics step.
 
-SplineManager.minLookAheadDistance / maxLookAheadDistance: steering stability vs responsiveness
+## Units note (read this if you tune the system)
 
-SimulationHandler.topSpeed, maxMotorTorque, maxBrakeForce, maxSteerAngle: vehicle limits
+SimulationHandler.CURRENT_SPEED is computed from Rigidbody velocity and stored in km/h.
 
-Scanning & path density
+Some parts of the longitudinal behavior (IDM) operate on Rigidbody velocity magnitude (which is m/s). For consistent tuning, it’s recommended to standardize units (either fully km/h or fully m/s) when polishing the project.
 
-WaypointManager.wpSpacing, scanRadius, rayCount: road detection quality vs cost
+## Debugging & visualization
 
-SplineManager.subdivisionsPerSegment: spline smoothness vs cost
+- Spline visualization: SplineManager draws spline segments and sample points in Gizmos.
+- Path/lane visualization + look-ahead point: Actions.OnDrawGizmosSelected()
+- Obstacle debug lines: Actions draws lines to detected target objects.
 
-Behavior arbitration
+## Evaluation summary (thesis)
 
-Priority outputs from behaviors determine which command is executed when multiple constraints apply (e.g., “red light braking” overrides “follow path”).
-
-Evaluation summary (thesis)
-
-An evaluation compared SDB against the BeamNG.drive built-in ADS on a ~1.9 km route using standardized indicators (time/average speed, traffic-light compliance, off-lane events).
-
-Main result: SDB completed the route faster and with fewer lane departures than the BeamNG ADS in the reported experiment.
+A thesis evaluation compared SDB against BeamNG.drive’s built-in ADS on a ~1.9 km route using standardized indicators:
+- time / average speed
+- traffic-light compliance
+- off-lane events
 
 Reported metrics (thesis):
+- SDB: 233s, 28.7 km/h avg, 13 off-lane events
+- BeamNG ADS: 261s, 27.63 km/h avg, 18 off-lane events
 
-SDB: 233s, 28.7 km/h avg, 13 off-lane events
+(See thesis for methodology details and limitations, especially around traffic light setup on the BeamNG route.)
 
-BeamNG ADS: 261s, 27.63 km/h avg, 18 off-lane events
+## Limitations
 
-(See thesis for methodology details and limitations around traffic light setup on the BeamNG route.)
+- Designed for two-way roads without intersections (no lane graph / junction logic yet).
+- Road perception relies on colliders tagged Road and assumes usable raycast hits.
+- No occlusion reasoning (object relevance is primarily “in front + within distance”).
+- Driving smoothness can show steering oscillations / occasional unnecessary braking (PID and look-ahead tuning opportunities).
 
-Limitations
+## Future work
 
-Designed for two-way roads without intersections (intersection/lane-graph support is listed as future work).
+- Intersection recognition + lane graph (multi-lane / routing)
+- Better perception (occlusion, lane boundaries, road markings)
+- Behavior layering (yielding, overtakes, hazard awareness)
+- Human-like profiles (patience/aggression, comfort braking)
+- Unit standardization + tuning tools (in-editor graphs, replayable benchmarks)
 
-Driving smoothness can show steering oscillations and occasional unnecessary braking at times (tuning + control smoothing opportunities).
+## Citation
 
-Future work
+If you use or reference this work academically:
 
-Intersection recognition & multi-lane reasoning
-
-Event awareness (reacting to world incidents: crashes, hazards, etc.)
-
-More “human-like” driving traits (patience, aggressiveness profiles, etc.)
-
-Citation
-BibTeX (thesis)
 @thesis{kapitsakis2025ads,
   title  = {ADS in Video Games: Analysis, Development, and Evaluation},
   author = {Emmanouil Kapitsakis},
