@@ -6,7 +6,7 @@ Self-Driving Bot (SDB) is a Unity-based Automated Driving System (ADS) prototype
 
 It procedurally builds a lane path from road scanning, follows it with Pure Pursuit steering, regulates speed with PID, and adds safety behaviors for traffic lights and front-car following (IDM-style) using a lightweight priority arbitration layer.
 
----
+
 
 ## Demo
 
@@ -16,7 +16,6 @@ It procedurally builds a lane path from road scanning, follows it with Pure Purs
 Recommended: add a short GIF here (10–20s)
 Media/demo.gif
 
----
 
 ## What this project does
 
@@ -128,7 +127,7 @@ Note: WorldModel.Update() is currently a placeholder. Registration happens via t
 
 ## Configuration (Inspector highlights)
 
-## Path following & speed
+### Path following & speed
 - Actions.desiredSpeed — cruise speed target (see Units note below)
 - Actions.minLookAheadDistance / maxLookAheadDistance — steering stability vs responsiveness
 - Actions.lookaheadGain — increases look-ahead with speed
