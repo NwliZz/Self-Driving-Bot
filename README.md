@@ -50,7 +50,7 @@ flowchart LR
   Driver --> Sim[SimulationHandler / WheelCollider actuation]
 
 ## How it works
-1) Road scanning -> Waypoints (WaypointManager)
+## 1) Road scanning -> Waypoints (WaypointManager)
 
 The ego vehicle "looks" ahead using a fan/arc of downward raycasts against colliders tagged Road. From the hits, it estimates left/right road edges, infers a lane center, and spawns a waypoint at a fixed spacing.
 
@@ -59,20 +59,20 @@ A small rolling window of waypoints is maintained:
 - a new waypoint is scanned and appended
 - the spline is updated incrementally
 
-2) Waypoints -> Spline path (SplineManager)
+## 2) Waypoints -> Spline path (SplineManager)
 
 Waypoints are converted into a dense sample path using Catmull-Rom interpolation with configurable subdivisionsPerSegment. This provides:
 - a smooth tracking path
 - curvature estimation (used for speed adaptation)
 - nearest spline point lookup
 
-3) Path following + speed planning (Actions)
+## 3) Path following + speed planning (Actions)
 
 - Steering (Pure Pursuit): selects a look-ahead point on the spline based on speed and computes a steering angle (degrees).
 - Speed planning: reduces target speed as curvature increases (curve look-ahead).
 - Speed control: a PID controller produces throttle/brake output based on the target speed vs current speed.
 
-4) Safety behaviors + priority arbitration (Driver + Actions)
+## 4) Safety behaviors + priority arbitration (Driver + Actions)
 
 Traffic light and front-car behaviors are evaluated in parallel and return ControlCommands with priorities. The Driver picks the highest priority command each physics step.
 
