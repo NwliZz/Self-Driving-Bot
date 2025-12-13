@@ -26,8 +26,8 @@ Media/demo.gif
 - Follows the path using Pure Pursuit steering.
 - Plans speed using curvature look-ahead and applies throttle/brake via PID speed control.
 - Adds safety behaviors:
-- - Front-car following via an IDM-style acceleration model
-- - Traffic light stopping (red/yellow) with 'stop before the object' behavior
+  - Front-car following via an IDM-style acceleration model
+  - Traffic light stopping (red/yellow) with 'stop before the object' behavior
 - Arbitrates behaviors with a unified ControlCommand and priority selection.
 
 ## Key design note (important)
