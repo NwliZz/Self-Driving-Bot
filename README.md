@@ -13,7 +13,7 @@ It procedurally builds a lane path from road scanning, follows it with Pure Purs
 - SDB run (YouTube): https://youtu.be/r0TC5QLBo5A
 - BeamNG ADS run (YouTube): https://youtu.be/AmPZhkvouV4
 
-Recommended: add a short GIF here (10–20s)
+add a short GIF here (10–20s)
 Media/demo.gif
 
 
